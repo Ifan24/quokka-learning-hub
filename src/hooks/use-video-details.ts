@@ -69,7 +69,9 @@ export const useVideoDetails = (id: string | undefined) => {
         setVideo({
           ...videoData,
           file_path: publicUrl,
-          user: videoData.user
+          user: {
+            full_name: videoData.user?.full_name ?? null
+          }
         });
       } catch (error: any) {
         console.error("Video loading error:", error);
