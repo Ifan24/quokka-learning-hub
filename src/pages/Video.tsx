@@ -13,13 +13,14 @@ import { format } from "date-fns";
 interface VideoDetails {
   id: string;
   title: string;
-  description: string;
-  views: number;
+  description: string | null;
+  views: number | null;
   duration: string;
   file_path: string;
   created_at: string;
+  user_id: string;
   user: {
-    full_name: string;
+    full_name: string | null;
   } | null;
 }
 
@@ -37,7 +38,7 @@ const Video = () => {
           .from("videos")
           .select(`
             *,
-            user:user_id (
+            user:profiles!videos_user_id_fkey (
               full_name
             )
           `)
@@ -59,7 +60,13 @@ const Video = () => {
           .from("videos")
           .getPublicUrl(data.file_path);
 
-        setVideo({ ...data, file_path: publicUrl });
+        const videoData: VideoDetails = {
+          ...data,
+          file_path: publicUrl,
+          user: data.user || { full_name: null }
+        };
+
+        setVideo(videoData);
 
         // Load last watched position
         const lastPosition = localStorage.getItem(`video-progress-${id}`);
