@@ -46,12 +46,22 @@ serve(async (req) => {
       ?.flatMap(quiz => (quiz.questions as any[])?.map(q => q.question) || [])
       .filter(Boolean);
 
+    // Create a more detailed timestamp reference for the AI
+    const timestampRanges = transcription_chunks.map((chunk: any) => ({
+      start: chunk.timestamp[0],
+      end: chunk.timestamp[1],
+      text: chunk.text
+    }));
+
     // Format transcription chunks for better context
-    const formattedChunks = transcription_chunks.map((chunk: any) => {
-      const startTime = chunk.timestamp[0];
-      const endTime = chunk.timestamp[1];
-      return `[${Math.floor(startTime/60)}:${Math.floor(startTime%60).toString().padStart(2, '0')} - ${Math.floor(endTime/60)}:${Math.floor(endTime%60).toString().padStart(2, '0')}] ${chunk.text}`;
-    }).join("\n");
+    const formattedChunks = timestampRanges.map(chunk => 
+      `[${Math.floor(chunk.start/60)}:${Math.floor(chunk.start%60).toString().padStart(2, '0')} - ${Math.floor(chunk.end/60)}:${Math.floor(chunk.end%60).toString().padStart(2, '0')}] ${chunk.text}`
+    ).join("\n");
+
+    // Create a list of valid timestamps for reference
+    const validTimestamps = timestampRanges.map(chunk => 
+      `- ${chunk.start} seconds (${Math.floor(chunk.start/60)}:${Math.floor(chunk.start%60).toString().padStart(2, '0')})`
+    ).join("\n");
 
     fal.config({
       credentials: apiKey,
@@ -65,13 +75,17 @@ Title: ${title}
 Content (with timestamps):
 ${formattedChunks}
 
+IMPORTANT - Valid Starting Timestamps:
+Use ONLY these exact timestamps for your questions:
+${validTimestamps}
+
 ${existingQuestions?.length ? `\nPreviously generated questions (DO NOT generate similar or identical questions):\n- ${existingQuestions.join("\n- ")}` : ''}
 
 Please generate 5 UNIQUE and DIFFERENT multiple-choice questions in the following JSON format:
 {
   "questions": [
     {
-      "timestamp": <number representing seconds into the video where the answer can be found>,
+      "timestamp": <MUST be one of the exact starting timestamps listed above>,
       "question": "the question text",
       "choices": ["choice 1", "choice 2", "choice 3", "choice 4"],
       "correctAnswer": <index of correct answer (0-3)>,
@@ -82,12 +96,12 @@ Please generate 5 UNIQUE and DIFFERENT multiple-choice questions in the followin
 
 Requirements:
 1. Questions should be challenging but fair
-2. IMPORTANT: Use the exact timestamps from the transcription chunks where the answer can be found. The timestamp should be the starting time (first number) from the relevant chunk.
+2. EXTREMELY IMPORTANT: You MUST ONLY use timestamps from the "Valid Starting Timestamps" list above. Do not make up or modify timestamps.
 3. Provide 4 choices for each question
 4. Include clear explanations for the correct answers
 5. Return valid JSON that exactly matches the format above
 6. Do not include any text outside of the JSON structure
-7. VERY IMPORTANT: Generate completely different questions from the ones listed above - do not repeat or rephrase existing questions`;
+7. Generate completely different questions from the ones listed above`;
 
     console.log("Sending request to FAL AI...");
 
@@ -120,7 +134,10 @@ Requirements:
         throw new Error("Invalid quiz data structure");
       }
 
-      // Validate each question and ensure timestamp exists in chunks
+      // Create a Set of valid timestamps for quick lookup
+      const validTimestampSet = new Set(timestampRanges.map(chunk => chunk.start));
+
+      // Validate each question
       quizData.questions.forEach((q: any, index: number) => {
         if (
           typeof q.timestamp !== 'number' ||
@@ -135,15 +152,9 @@ Requirements:
           throw new Error(`Invalid question format at index ${index}`);
         }
 
-        // Verify that the timestamp exists in one of the chunks
-        const timestampExists = transcription_chunks.some(
-          (chunk: any) => 
-            q.timestamp >= chunk.timestamp[0] && 
-            q.timestamp <= chunk.timestamp[1]
-        );
-
-        if (!timestampExists) {
-          throw new Error(`Question ${index + 1} has an invalid timestamp that doesn't match any transcription chunk`);
+        // Check if the timestamp is one of the valid starting timestamps
+        if (!validTimestampSet.has(q.timestamp)) {
+          throw new Error(`Question ${index + 1} uses an invalid timestamp. Must be one of the exact starting timestamps provided.`);
         }
       });
 
