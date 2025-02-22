@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Navigation from "@/components/Navigation";
 import StatsCard from "@/components/StatsCard";
 import VideoCard from "@/components/VideoCard";
 import { Clock, Film, Upload, User } from "lucide-react";
@@ -74,7 +73,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       <main className="container px-4 py-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
           <div>
