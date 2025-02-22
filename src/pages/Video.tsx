@@ -13,14 +13,13 @@ import { format } from "date-fns";
 interface VideoDetails {
   id: string;
   title: string;
-  description: string | null;
-  views: number | null;
+  description: string;
+  views: number;
   duration: string;
   file_path: string;
   created_at: string;
-  user_id: string;
   user: {
-    full_name: string | null;
+    full_name: string;
   } | null;
 }
 
@@ -34,31 +33,23 @@ const Video = () => {
   useEffect(() => {
     const fetchVideo = async () => {
       try {
-        const { data: videoData, error } = await supabase
+        const { data, error } = await supabase
           .from("videos")
           .select(`
             *,
-            user:profiles(
+            user:user_id (
               full_name
             )
           `)
           .eq("id", id)
-          .maybeSingle();
+          .single();
 
         if (error) throw error;
-        if (!videoData) {
-          toast({
-            title: "Video not found",
-            description: "The requested video could not be found.",
-            variant: "destructive",
-          });
-          return;
-        }
 
         // Increment view count
         const { error: updateError } = await supabase
           .from("videos")
-          .update({ views: (videoData.views || 0) + 1 })
+          .update({ views: (data.views || 0) + 1 })
           .eq("id", id);
 
         if (updateError) throw updateError;
@@ -66,13 +57,9 @@ const Video = () => {
         // Get video URL
         const { data: { publicUrl } } = supabase.storage
           .from("videos")
-          .getPublicUrl(videoData.file_path);
+          .getPublicUrl(data.file_path);
 
-        setVideo({
-          ...videoData,
-          file_path: publicUrl,
-          user: Array.isArray(videoData.user) ? videoData.user[0] : videoData.user
-        });
+        setVideo({ ...data, file_path: publicUrl });
 
         // Load last watched position
         const lastPosition = localStorage.getItem(`video-progress-${id}`);
