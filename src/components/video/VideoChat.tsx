@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +20,7 @@ export const VideoChat = ({ video }: VideoChatProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const streamingMessageRef = useRef<ChatMessage | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,32 +28,51 @@ export const VideoChat = ({ video }: VideoChatProps) => {
 
     const userMessage = { role: "user" as const, content: input };
     setMessages(prev => [...prev, userMessage]);
+
+    // Initialize streaming message
+    streamingMessageRef.current = { role: "assistant", content: "" };
+    setMessages(prev => [...prev, streamingMessageRef.current!]);
+
     setInput("");
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("chat-with-video", {
-        body: {
+      const response = await fetch(`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.functions.supabase.co/chat-with-video`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
           question: input,
           transcription: video.transcription_text,
-        },
+        }),
       });
 
-      if (error) throw error;
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
 
-      if (data?.output) {
-        setMessages(prev => [...prev, {
-          role: "assistant",
-          content: data.output,
-        }]);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const data = JSON.parse(chunk);
+
+        if (data.delta) {
+          streamingMessageRef.current!.content += data.delta;
+          // Force a re-render by creating a new messages array
+          setMessages(prev => [...prev.slice(0, -1), { ...streamingMessageRef.current! }]);
+        }
       }
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages(prev => [...prev, {
+      setMessages(prev => [...prev.slice(0, -1), {
         role: "assistant",
         content: "Sorry, I encountered an error while processing your question. Please try again.",
       }]);
     } finally {
+      streamingMessageRef.current = null;
       setIsLoading(false);
     }
   };

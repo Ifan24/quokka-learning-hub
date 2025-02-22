@@ -34,32 +34,57 @@ Question: ${question}
 
 Please provide a clear and concise answer based solely on the information provided in the transcription.`
 
-    console.log('Sending request to FAL AI...')
-    const result = await fal.subscribe("fal-ai/any-llm", {
-      input: {
-        model: "anthropic/claude-3.5-sonnet",
-        prompt: prompt,
-        reasoning: false
+    console.log('Starting FAL AI stream...')
+
+    // Create a TransformStream for streaming the response
+    const stream = new TransformStream()
+    const writer = stream.writable.getWriter()
+
+    // Start the streaming response
+    const response = new Response(stream.readable, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Transfer-Encoding': 'chunked',
       },
-      logs: true,
-      onQueueUpdate: (update) => {
-        if (update.status === "IN_PROGRESS") {
-          update.logs.map((log) => log.message).forEach(console.log);
-        }
-      }
     })
 
-    console.log('Received response from FAL AI:', result)
+    // Process the stream in the background
+    const processStream = async () => {
+      try {
+        const stream = await fal.stream("fal-ai/any-llm", {
+          input: {
+            model: "anthropic/claude-3.5-sonnet",
+            prompt: prompt,
+            reasoning: false
+          }
+        })
 
-    return new Response(
-      JSON.stringify({ success: true, output: result.data.output }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json',
+        for await (const event of stream) {
+          if (event.data?.output) {
+            await writer.write(
+              new TextEncoder().encode(
+                JSON.stringify({ delta: event.data.output }) + '\n'
+              )
+            )
+          }
         }
+      } catch (error) {
+        console.error('Streaming error:', error)
+        await writer.write(
+          new TextEncoder().encode(
+            JSON.stringify({ error: error.message }) + '\n'
+          )
+        )
+      } finally {
+        await writer.close()
       }
-    )
+    }
+
+    // Start processing the stream without awaiting
+    processStream()
+
+    return response
 
   } catch (error) {
     console.error('Chat error:', error)
