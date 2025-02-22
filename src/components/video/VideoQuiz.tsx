@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -48,6 +47,8 @@ export const VideoQuiz = ({
 
   const loadQuizzes = async () => {
     try {
+      setQuizzes([]);
+      
       const { data, error } = await supabase
         .from("quizzes")
         .select("*")
@@ -199,8 +200,14 @@ export const VideoQuiz = ({
 
       console.log("Quiz deleted successfully");
       
-      // Refresh quizzes from the database to ensure we have the latest state
-      await loadQuizzes();
+      const updatedQuizzes = quizzes.filter(quiz => quiz.id !== quizToDelete.id);
+      setQuizzes(updatedQuizzes);
+      
+      if (currentQuizIndex >= updatedQuizzes.length) {
+        setCurrentQuizIndex(Math.max(0, updatedQuizzes.length - 1));
+      }
+      setCurrentQuestionIndex(0);
+      setSelectedAnswer(null);
       
       toast({
         title: "Quiz Deleted",
@@ -213,7 +220,6 @@ export const VideoQuiz = ({
         description: error.message,
         variant: "destructive"
       });
-      // Refresh quizzes to ensure UI is in sync with database
       await loadQuizzes();
     } finally {
       setIsDeleting(false);
