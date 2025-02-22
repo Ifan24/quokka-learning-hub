@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import ReactPlayer from "react-player";
@@ -33,27 +32,16 @@ const Video = () => {
   const playerRef = useRef<ReactPlayer>(null);
   const { toast } = useToast();
   const [currentVideo, setCurrentVideo] = useState("");
-  const [currentPart, setCurrentPart] = useState(0);
+  const [currentPart, setCurrentPart] = useState(1);
   const [videoParts, setVideoParts] = useState<string[]>([]);
 
   const checkAndGetVideoParts = async (filePath: string): Promise<string[]> => {
     console.log("Checking for video parts...");
     const parts: string[] = [];
-    let partIndex = 0;
+    let partIndex = 1;
     let hasMoreParts = true;
 
     try {
-      // First, check if base file exists
-      const { data: baseData, error: baseError } = await supabase.storage
-        .from("videos")
-        .createSignedUrl(filePath, 7200);
-
-      if (!baseError && baseData?.signedUrl) {
-        console.log("Found base video file");
-        parts.push(baseData.signedUrl);
-      }
-
-      // Then check for all parts
       while (hasMoreParts) {
         const partPath = `${filePath}.part${partIndex}`;
         console.log(`Checking for part: ${partPath}`);
@@ -92,7 +80,6 @@ const Video = () => {
         if (error) throw error;
         setVideo(data);
 
-        // Get all video parts
         const parts = await checkAndGetVideoParts(data.file_path);
         if (parts.length === 0) {
           throw new Error("No video parts found");
@@ -100,9 +87,8 @@ const Video = () => {
 
         setVideoParts(parts);
         setCurrentVideo(parts[0]);
-        console.log("Starting with part 0");
+        console.log("Starting with part1");
 
-        // Update view count
         await supabase
           .from("videos")
           .update({ views: (data.views || 0) + 1 })
@@ -126,22 +112,20 @@ const Video = () => {
   }, [id, toast]);
 
   const handleProgress = ({ played, loaded }: { played: number; loaded: number }) => {
-    // Calculate overall progress
-    const partProgress = (currentPart / videoParts.length) * 100;
+    const partProgress = ((currentPart - 1) / videoParts.length) * 100;
     const currentPartProgress = (loaded * (100 / videoParts.length));
     setLoadingProgress(Math.round(partProgress + currentPartProgress));
 
-    // Save playback position
     setPlayedSeconds(played);
     localStorage.setItem(`video-progress-${id}`, played.toString());
   };
 
   const handleEnded = () => {
     const nextPart = currentPart + 1;
-    if (nextPart < videoParts.length) {
+    if (nextPart <= videoParts.length) {
       console.log(`Moving to part ${nextPart}`);
       setCurrentPart(nextPart);
-      setCurrentVideo(videoParts[nextPart]);
+      setCurrentVideo(videoParts[nextPart - 1]);
       setIsVideoLoading(true);
     }
   };
@@ -159,9 +143,8 @@ const Video = () => {
       variant: "destructive",
     });
 
-    // Try to reload the current part
-    if (videoParts[currentPart]) {
-      setCurrentVideo(videoParts[currentPart]);
+    if (videoParts[currentPart - 1]) {
+      setCurrentVideo(videoParts[currentPart - 1]);
     }
   };
 
@@ -224,7 +207,7 @@ const Video = () => {
                   <div className="text-white text-center mb-4">
                     <div className="mb-2 text-lg font-medium">Loading video...</div>
                     <div className="text-sm text-gray-300">
-                      Part {currentPart + 1}/{videoParts.length} ({Math.round(loadingProgress)}% overall)
+                      Part {currentPart}/{videoParts.length} ({Math.round(loadingProgress)}% overall)
                     </div>
                   </div>
                   <div className="w-64">
@@ -235,7 +218,7 @@ const Video = () => {
               <div className={`transition-opacity duration-300 ${!isVideoLoading ? 'opacity-100' : 'opacity-0'}`}>
                 <ReactPlayer
                   ref={playerRef}
-                  key={currentVideo} // Force reload when URL changes
+                  key={currentVideo}
                   url={currentVideo}
                   width="100%"
                   height="100%"
