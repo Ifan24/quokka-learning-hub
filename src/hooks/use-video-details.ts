@@ -30,8 +30,17 @@ export const useVideoDetails = (id: string | undefined) => {
         const { data: videoData, error } = await supabase
           .from("videos")
           .select(`
-            *,
-            profiles!videos_user_id_fkey(full_name)
+            id,
+            title,
+            description,
+            views,
+            duration,
+            file_path,
+            created_at,
+            user_id,
+            profiles (
+              full_name
+            )
           `)
           .eq("id", id)
           .maybeSingle();
