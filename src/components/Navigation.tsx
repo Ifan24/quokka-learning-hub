@@ -44,13 +44,11 @@ const Navigation = () => {
             Sign Out
           </Button>
         ) : (
-          <Button
-            variant="outline"
-            as={Link}
-            to={location.pathname === "/auth" ? "/" : "/auth"}
-          >
-            {location.pathname === "/auth" ? "Back to Home" : "Sign In"}
-          </Button>
+          <Link to={location.pathname === "/auth" ? "/" : "/auth"}>
+            <Button variant="outline">
+              {location.pathname === "/auth" ? "Back to Home" : "Sign In"}
+            </Button>
+          </Link>
         )}
       </div>
     </nav>
