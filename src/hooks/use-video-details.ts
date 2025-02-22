@@ -21,13 +21,9 @@ export const useVideoDetails = (id: string | undefined) => {
       try {
         const { data: videoData, error } = await supabase
           .from("videos")
-          .select(`
-            id,
-            title,
-            file_path
-          `)
+          .select("*")
           .eq("id", id)
-          .maybeSingle();
+          .single();
 
         if (error) throw error;
         if (!videoData) {
@@ -39,14 +35,17 @@ export const useVideoDetails = (id: string | undefined) => {
           return;
         }
 
-        // Get video URL
-        const { data: { publicUrl } } = supabase.storage
+        // Get video URL - this should return the full public URL for the video file
+        const { data } = supabase.storage
           .from("videos")
           .getPublicUrl(videoData.file_path);
 
+        console.log("Video URL:", data.publicUrl); // Debug log
+
         setVideo({
-          ...videoData,
-          file_path: publicUrl
+          id: videoData.id,
+          title: videoData.title,
+          file_path: data.publicUrl
         });
       } catch (error: any) {
         console.error("Video loading error:", error);
