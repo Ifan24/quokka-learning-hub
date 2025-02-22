@@ -62,28 +62,17 @@ Please provide a clear and concise answer based solely on the information provid
       try {
         console.log('Making FAL AI request...');
         
-        const result = await fal.subscribe('fal-ai/any-llm', {
+        const falStream = await fal.stream('fal-ai/any-llm', {
           input: {
             model: 'anthropic/claude-3.5-sonnet',
             prompt: prompt,
-            stream: true,
-          },
-          logs: true,
-          onError: async (error) => {
-            console.error('FAL AI error:', error);
-            await writer.write(
-              new TextEncoder().encode(
-                JSON.stringify({ error: error.message }) + '\n'
-              )
-            );
           }
         });
 
-        console.log('Request initialized, processing response...');
+        console.log('Request initialized, processing stream...');
         
-        for await (const event of result) {
+        for await (const event of falStream) {
           console.log('Received event:', event);
-          
           if (event.output) {
             await writer.write(
               new TextEncoder().encode(
@@ -93,7 +82,10 @@ Please provide a clear and concise answer based solely on the information provid
           }
         }
 
-        console.log('Stream completed successfully');
+        // Get the final result
+        const result = await falStream.done();
+        console.log('Stream completed successfully:', result);
+
       } catch (error) {
         console.error('Streaming error:', error);
         await writer.write(
