@@ -54,12 +54,29 @@ const VideoCard = ({
 
   const handleDelete = async () => {
     try {
-      const { error: storageError } = await supabase.storage
+      // Delete video file from storage
+      const { error: videoError } = await supabase.storage
         .from("videos")
         .remove([filePath]);
 
-      if (storageError) throw storageError;
+      if (videoError) throw videoError;
 
+      // If there's a thumbnail, delete it too
+      if (thumbnail) {
+        const thumbnailPath = thumbnail.split('/').pop();
+        if (thumbnailPath) {
+          const { error: thumbnailError } = await supabase.storage
+            .from("thumbnails")
+            .remove([thumbnailPath]);
+
+          if (thumbnailError) {
+            console.error("Error deleting thumbnail:", thumbnailError);
+            // Continue with deletion even if thumbnail deletion fails
+          }
+        }
+      }
+
+      // Delete database record
       const { error: dbError } = await supabase
         .from("videos")
         .delete()
