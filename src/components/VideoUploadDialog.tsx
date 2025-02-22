@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -67,6 +66,27 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
     });
   };
 
+  const getVideoDuration = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        const duration = video.duration;
+        const minutes = Math.floor(duration / 60);
+        const seconds = Math.floor(duration % 60);
+        resolve(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      };
+      
+      video.onerror = () => {
+        reject(new Error("Error loading video metadata"));
+      };
+      
+      video.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
@@ -129,6 +149,9 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
     setUploading(true);
 
     try {
+      // Get video duration
+      const duration = await getVideoDuration(file);
+      
       // Generate thumbnail
       const thumbnailBlob = await generateThumbnail(file);
       
@@ -143,7 +166,7 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
 
       // Upload thumbnail to Supabase Storage
       const thumbnailFileName = `${crypto.randomUUID()}.jpg`;
-      const { error: thumbnailUploadError, data: thumbnailData } = await supabase.storage
+      const { error: thumbnailUploadError } = await supabase.storage
         .from("thumbnails")
         .upload(thumbnailFileName, thumbnailBlob);
 
@@ -161,7 +184,7 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
         file_path: videoFileName,
         thumbnail_url: thumbnailUrl,
         size: file.size,
-        duration: "00:00", // This would be updated after processing
+        duration,
         user_id: user.id,
       });
 

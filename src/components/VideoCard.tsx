@@ -48,6 +48,7 @@ const VideoCard = ({
 }: VideoCardProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { toast } = useToast();
 
   const handleDelete = async () => {
@@ -112,19 +113,27 @@ const VideoCard = ({
                 {views.toLocaleString()} views
               </p>
             </div>
-            <DropdownMenu>
+            <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                <DropdownMenuItem 
+                  onClick={() => {
+                    setIsEditDialogOpen(true);
+                    setIsDropdownOpen(false);
+                  }}
+                >
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => setIsDeleteDialogOpen(true)}
+                  onClick={() => {
+                    setIsDeleteDialogOpen(true);
+                    setIsDropdownOpen(false);
+                  }}
                   className="text-red-600"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
@@ -139,7 +148,10 @@ const VideoCard = ({
         </div>
       </Card>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog 
+        open={isDeleteDialogOpen} 
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Video</AlertDialogTitle>
@@ -165,7 +177,13 @@ const VideoCard = ({
         currentDescription={description}
         currentThumbnail={thumbnail}
         open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          // Reset dropdown state when edit dialog closes
+          if (!open) {
+            setIsDropdownOpen(false);
+          }
+        }}
         onUpdateComplete={() => {
           onUpdate?.();
         }}
