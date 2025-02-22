@@ -37,6 +37,7 @@ export const VideoChat = ({ video }: VideoChatProps) => {
     setIsLoading(true);
 
     try {
+      console.log("Sending request to edge function...");
       const response = await fetch(`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.functions.supabase.co/chat-with-video`, {
         method: 'POST',
         headers: {
@@ -49,6 +50,11 @@ export const VideoChat = ({ video }: VideoChatProps) => {
         }),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Server responded with ${response.status}: ${JSON.stringify(errorData)}`);
+      }
+
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
 
@@ -57,19 +63,27 @@ export const VideoChat = ({ video }: VideoChatProps) => {
         if (done) break;
 
         const chunk = decoder.decode(value);
-        const data = JSON.parse(chunk);
+        console.log("Received chunk:", chunk);
 
-        if (data.delta) {
-          streamingMessageRef.current!.content += data.delta;
-          // Force a re-render by creating a new messages array
-          setMessages(prev => [...prev.slice(0, -1), { ...streamingMessageRef.current! }]);
+        try {
+          const data = JSON.parse(chunk);
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          if (data.delta) {
+            streamingMessageRef.current!.content += data.delta;
+            setMessages(prev => [...prev.slice(0, -1), { ...streamingMessageRef.current! }]);
+          }
+        } catch (parseError) {
+          console.error("Error parsing chunk:", parseError);
+          throw new Error("Failed to parse server response");
         }
       }
     } catch (error) {
       console.error("Chat error:", error);
       setMessages(prev => [...prev.slice(0, -1), {
         role: "assistant",
-        content: "Sorry, I encountered an error while processing your question. Please try again.",
+        content: `Error: ${error.message}`,
       }]);
     } finally {
       streamingMessageRef.current = null;
