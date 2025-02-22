@@ -2,6 +2,7 @@
 // @ts-ignore
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { fal } from "npm:@fal-ai/client";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +26,26 @@ serve(async (req) => {
       throw new Error("FAL_API_KEY is not configured");
     }
 
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch existing quizzes for this video
+    const { data: existingQuizzes, error: fetchError } = await supabase
+      .from("quizzes")
+      .select("questions")
+      .eq("video_id", videoId);
+
+    if (fetchError) {
+      throw new Error(`Error fetching existing quizzes: ${fetchError.message}`);
+    }
+
+    // Extract existing questions
+    const existingQuestions = existingQuizzes
+      ?.flatMap(quiz => (quiz.questions as any[])?.map(q => q.question) || [])
+      .filter(Boolean);
+
     fal.config({
       credentials: apiKey,
     });
@@ -37,7 +58,9 @@ Title: ${title}
 Content:
 ${transcription}
 
-Please generate 5 multiple-choice questions in the following JSON format:
+${existingQuestions?.length ? `\nPreviously generated questions (DO NOT generate similar or identical questions):\n- ${existingQuestions.join("\n- ")}` : ''}
+
+Please generate 5 UNIQUE and DIFFERENT multiple-choice questions in the following JSON format:
 {
   "questions": [
     {
@@ -56,7 +79,8 @@ Requirements:
 3. Provide 4 choices for each question
 4. Include clear explanations for the correct answers
 5. Return valid JSON that exactly matches the format above
-6. Do not include any text outside of the JSON structure`;
+6. Do not include any text outside of the JSON structure
+7. VERY IMPORTANT: Generate completely different questions from the ones listed above - do not repeat or rephrase existing questions`;
 
     console.log("Sending request to FAL AI...");
 
