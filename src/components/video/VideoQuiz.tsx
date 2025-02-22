@@ -43,23 +43,43 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
 
       if (generationError) throw generationError;
 
-      // Ensure we have valid quiz data
+      // Ensure we have valid quiz data and validate its structure
       if (!quizData?.questions || !Array.isArray(quizData.questions)) {
         throw new Error("Invalid quiz data received from AI");
       }
+
+      // Validate each question has the required properties
+      const questions = quizData.questions.map((q: any): QuizQuestion => {
+        if (
+          typeof q.timestamp !== 'number' ||
+          typeof q.question !== 'string' ||
+          !Array.isArray(q.choices) ||
+          typeof q.correctAnswer !== 'number' ||
+          typeof q.explanation !== 'string'
+        ) {
+          throw new Error("Invalid question format received from AI");
+        }
+        return {
+          timestamp: q.timestamp,
+          question: q.question,
+          choices: q.choices,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+        };
+      });
 
       const { data: savedQuiz, error: saveError } = await supabase
         .from("quizzes")
         .insert({
           video_id: video.id,
-          questions: quizData.questions,
+          questions: questions,
         })
         .select("*")
         .single();
 
       if (saveError) throw saveError;
 
-      // Cast the savedQuiz to ensure type safety
+      // Create a properly typed Quiz object
       const typedQuiz: Quiz = {
         id: savedQuiz.id,
         video_id: savedQuiz.video_id,

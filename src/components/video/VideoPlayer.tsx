@@ -1,11 +1,12 @@
 
+import { forwardRef } from "react";
 import ReactPlayer from "react-player";
 
 interface VideoPlayerProps {
   url: string;
 }
 
-export const VideoPlayer = ({ url }: VideoPlayerProps) => {
+export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(({ url }, ref) => {
   return (
     <div className="rounded-lg overflow-hidden bg-black aspect-video mb-6">
       <ReactPlayer
@@ -15,6 +16,7 @@ export const VideoPlayer = ({ url }: VideoPlayerProps) => {
         controls
         playing
         playsinline
+        ref={ref}
         config={{
           file: {
             attributes: {
@@ -26,4 +28,6 @@ export const VideoPlayer = ({ url }: VideoPlayerProps) => {
       />
     </div>
   );
-};
+});
+
+VideoPlayer.displayName = "VideoPlayer";
