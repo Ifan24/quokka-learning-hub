@@ -38,11 +38,11 @@ export const VideoChat = ({ video }: VideoChatProps) => {
 
     try {
       console.log("Sending request to edge function...");
-      const response = await fetch(`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.functions.supabase.co/chat-with-video`, {
+      const response = await fetch(`https://bclvquqynectsarfouvp.functions.supabase.co/chat-with-video`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjbHZxdXF5bmVjdHNhcmZvdXZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAyMDY4MzgsImV4cCI6MjA1NTc4MjgzOH0.4QaBN2__cUbSCYteCQFJ4rgkIouhXck2Rp28Bz8lsZA`,
         },
         body: JSON.stringify({
           question: input,
