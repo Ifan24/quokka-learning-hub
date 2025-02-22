@@ -8,16 +8,16 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+
 interface VideoUploadDialogProps {
   onUploadComplete?: () => void;
   children: React.ReactNode;
 }
+
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_FILE_TYPES = ["video/mp4", "video/quicktime"];
-export function VideoUploadDialog({
-  onUploadComplete,
-  children
-}: VideoUploadDialogProps) {
+
+export function VideoUploadDialog({ onUploadComplete, children }: VideoUploadDialogProps) {
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -27,6 +27,7 @@ export function VideoUploadDialog({
   const {
     toast
   } = useToast();
+
   const generateThumbnail = (videoFile: File): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const video = document.createElement('video');
@@ -53,6 +54,7 @@ export function VideoUploadDialog({
       video.src = URL.createObjectURL(videoFile);
     });
   };
+
   const getVideoDuration = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const video = document.createElement('video');
@@ -70,6 +72,7 @@ export function VideoUploadDialog({
       video.src = URL.createObjectURL(file);
     });
   };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
@@ -94,6 +97,7 @@ export function VideoUploadDialog({
     setTitle(fileTitle);
     setFile(selectedFile);
   };
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
@@ -101,6 +105,7 @@ export function VideoUploadDialog({
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
+
   const handleUpload = async () => {
     if (!file || !title.trim()) {
       toast({
@@ -126,19 +131,13 @@ export function VideoUploadDialog({
     setUploading(true);
     setUploadProgress(0);
     try {
-      // Get video duration
       const duration = await getVideoDuration(file);
-
-      // Generate thumbnail
       setUploadProgress(20);
       const thumbnailBlob = await generateThumbnail(file);
-
-      // Upload video as a single file
+      setUploadProgress(30);
       const videoExt = file.name.split(".").pop();
       const videoFileName = `${crypto.randomUUID()}.${videoExt}`;
-      setUploadProgress(30);
-
-      // Single file upload
+      setUploadProgress(40);
       const {
         error: uploadError
       } = await supabase.storage.from("videos").upload(videoFileName, file, {
@@ -147,23 +146,17 @@ export function VideoUploadDialog({
       });
       if (uploadError) throw uploadError;
       setUploadProgress(70);
-
-      // Upload thumbnail
       const thumbnailFileName = `${crypto.randomUUID()}.jpg`;
       const {
         error: thumbnailUploadError
       } = await supabase.storage.from("thumbnails").upload(thumbnailFileName, thumbnailBlob);
       if (thumbnailUploadError) throw thumbnailUploadError;
       setUploadProgress(85);
-
-      // Get thumbnail URL
       const {
         data: {
           publicUrl: thumbnailUrl
         }
       } = supabase.storage.from("thumbnails").getPublicUrl(thumbnailFileName);
-
-      // Create video record
       setUploadProgress(90);
       const {
         error: dbError
@@ -175,7 +168,7 @@ export function VideoUploadDialog({
         size: file.size,
         duration,
         user_id: user.id,
-        total_parts: 1 // Always 1 since we're not splitting files
+        total_parts: 1
       });
       if (dbError) throw dbError;
       setUploadProgress(100);
@@ -196,18 +189,23 @@ export function VideoUploadDialog({
       setUploadProgress(0);
     }
   };
+
   const resetForm = () => {
     setFile(null);
     setTitle("");
     setDescription("");
     setUploadProgress(0);
   };
-  return <Dialog open={open} onOpenChange={newOpen => {
-    if (!newOpen) resetForm();
-    setOpen(newOpen);
-  }}>
+
+  return (
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      if (!uploading) {
+        resetForm();
+        setOpen(newOpen);
+      }
+    }}>
       <DialogTrigger asChild>
-        <Button className="">
+        <Button className="whitespace-nowrap inline-flex items-center">
           <Upload className="w-4 h-4 mr-2" />
           Upload New Video
         </Button>
@@ -251,5 +249,6 @@ export function VideoUploadDialog({
           </Button>
         </div>
       </DialogContent>
-    </Dialog>;
+    </Dialog>
+  );
 }
