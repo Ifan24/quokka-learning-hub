@@ -132,29 +132,55 @@ const Video = () => {
       if (videoElement) {
         videoElement.setAttribute('preload', 'auto');
 
-        // Track loading progress
         let lastLoadedPercent = 0;
         const updateLoadingProgress = () => {
-          if (videoElement.buffered.length > 0) {
-            const loadedFraction = videoElement.buffered.end(0) / videoElement.duration;
-            const loadedPercent = Math.round(loadedFraction * 100);
-            if (loadedPercent !== lastLoadedPercent) {
-              console.log(`Loading progress: ${loadedPercent}%`);
-              setLoadingProgress(loadedPercent);
-              lastLoadedPercent = loadedPercent;
+          try {
+            if (videoElement.buffered && videoElement.buffered.length > 0 && videoElement.duration) {
+              const bufferedEnd = videoElement.buffered.end(videoElement.buffered.length - 1);
+              const duration = videoElement.duration;
+              const loadedPercent = Math.round((bufferedEnd / duration) * 100);
+              
+              console.log(`Buffered end: ${bufferedEnd}, Duration: ${duration}, Progress: ${loadedPercent}%`);
+              
+              if (loadedPercent !== lastLoadedPercent) {
+                setLoadingProgress(loadedPercent);
+                lastLoadedPercent = loadedPercent;
+
+                if (loadedPercent >= 95) {
+                  console.log("Video mostly loaded, enabling playback");
+                  setIsVideoLoading(false);
+                  setCanPlay(true);
+                }
+              }
+            } else {
+              console.log("Waiting for video metadata...");
             }
-            
-            // Consider video ready to play when it's mostly loaded
-            if (loadedPercent >= 95) {
-              setIsVideoLoading(false);
-              setCanPlay(true);
-            }
+          } catch (error) {
+            console.error("Error updating progress:", error);
           }
         };
 
-        videoElement.addEventListener('progress', updateLoadingProgress);
+        // Listen for metadata loading
+        videoElement.addEventListener('loadedmetadata', () => {
+          console.log("Video metadata loaded");
+          console.log(`Video duration: ${videoElement.duration}`);
+          updateLoadingProgress();
+        });
+
+        // Track loading progress
+        videoElement.addEventListener('progress', () => {
+          console.log("Progress event fired");
+          updateLoadingProgress();
+        });
+
+        // Additional loading events
         videoElement.addEventListener('loadeddata', () => {
           console.log("Initial video data loaded");
+          updateLoadingProgress();
+        });
+
+        videoElement.addEventListener('canplay', () => {
+          console.log("Video can start playing");
           updateLoadingProgress();
         });
 
@@ -164,6 +190,7 @@ const Video = () => {
         });
 
         // Start loading the video
+        console.log("Starting video load");
         videoElement.load();
       }
     }
