@@ -69,14 +69,14 @@ Requirements:
 
     console.log("Received response from FAL AI:", result);
 
-    if (!result || !result.output) {
+    if (!result?.data?.output) {
       throw new Error("No response received from AI");
     }
 
     let quizData;
     try {
       // Find the JSON object in the response
-      const jsonMatch = result.output.match(/\{[\s\S]*\}/);
+      const jsonMatch = result.data.output.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error("No JSON found in AI response");
       }
@@ -106,7 +106,7 @@ Requirements:
       });
 
     } catch (error) {
-      console.error("Failed to parse quiz data:", error, "Raw output:", result.output);
+      console.error("Failed to parse quiz data:", error, "Raw output:", result.data.output);
       throw new Error(`Failed to parse quiz data: ${error.message}`);
     }
 
