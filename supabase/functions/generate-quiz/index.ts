@@ -55,26 +55,59 @@ Requirements:
 2. All timestamps should correspond to relevant moments in the video
 3. Provide 4 choices for each question
 4. Include clear explanations for the correct answers
-5. Return valid JSON that exactly matches the format above`;
+5. Return valid JSON that exactly matches the format above
+6. Do not include any text outside of the JSON structure`;
 
     console.log("Sending request to FAL AI...");
 
     const result = await fal.subscribe("fal-ai/any-llm", {
       input: {
-        model: "anthropic/claude-3.5-sonnet",
+        model: "anthropic/claude-3-sonnet",
         prompt,
       },
     });
 
-    console.log("Received response from FAL AI");
+    console.log("Received response from FAL AI:", result);
+
+    if (!result || !result.output) {
+      throw new Error("No response received from AI");
+    }
 
     let quizData;
     try {
-      quizData = JSON.parse(result.output);
-      console.log("Successfully parsed quiz data");
+      // Find the JSON object in the response
+      const jsonMatch = result.output.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("No JSON found in AI response");
+      }
+
+      quizData = JSON.parse(jsonMatch[0]);
+      console.log("Successfully parsed quiz data:", quizData);
+
+      // Validate the structure of the parsed data
+      if (!quizData.questions || !Array.isArray(quizData.questions)) {
+        throw new Error("Invalid quiz data structure");
+      }
+
+      // Validate each question
+      quizData.questions.forEach((q: any, index: number) => {
+        if (
+          typeof q.timestamp !== 'number' ||
+          typeof q.question !== 'string' ||
+          !Array.isArray(q.choices) ||
+          q.choices.length !== 4 ||
+          typeof q.correctAnswer !== 'number' ||
+          q.correctAnswer < 0 ||
+          q.correctAnswer > 3 ||
+          typeof q.explanation !== 'string'
+        ) {
+          throw new Error(`Invalid question format at index ${index}`);
+        }
+      });
+
     } catch (error) {
-      console.error("Failed to parse quiz data:", error);
-      throw new Error("Failed to parse quiz data from AI response");
+      console.error("Failed to parse quiz data:", error, "Raw output:", result.output);
+      throw new Error(`Failed to parse quiz data: ${error.message}`);
     }
 
     return new Response(JSON.stringify(quizData), {
