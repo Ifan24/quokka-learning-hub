@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,14 +52,12 @@ const VideoCard = ({
 
   const handleDelete = async () => {
     try {
-      // Delete video file from storage
       const { error: storageError } = await supabase.storage
         .from("videos")
         .remove([filePath]);
 
       if (storageError) throw storageError;
 
-      // Delete video record from database
       const { error: dbError } = await supabase
         .from("videos")
         .delete()
@@ -179,7 +176,6 @@ const VideoCard = ({
         open={isEditDialogOpen}
         onOpenChange={(open) => {
           setIsEditDialogOpen(open);
-          // Reset dropdown state when edit dialog closes
           if (!open) {
             setIsDropdownOpen(false);
           }

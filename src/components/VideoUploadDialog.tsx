@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -172,7 +173,7 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
 
       if (thumbnailUploadError) throw thumbnailUploadError;
 
-      // Get thumbnail URL
+      // Get thumbnail URL using the correct path
       const { data: { publicUrl: thumbnailUrl } } = supabase.storage
         .from("thumbnails")
         .getPublicUrl(thumbnailFileName);

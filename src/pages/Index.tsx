@@ -17,7 +17,7 @@ interface Video {
   description: string;
   duration: string;
   views: number;
-  thumbnail?: string;
+  thumbnail_url?: string;
   file_path: string;
   created_at: string;
 }
@@ -132,7 +132,7 @@ const Index = () => {
                 duration={video.duration}
                 views={video.views || 0}
                 description={video.description || ""}
-                thumbnail={video.thumbnail}
+                thumbnail={video.thumbnail_url}
                 filePath={video.file_path}
                 onDelete={handleDelete}
                 onUpdate={handleUpdate}
