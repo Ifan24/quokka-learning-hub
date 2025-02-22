@@ -32,7 +32,6 @@ const Video = () => {
   const playerRef = useRef<ReactPlayer>(null);
   const { toast } = useToast();
   const [videoUrl, setVideoUrl] = useState<string[]>([]);
-  const [canPlay, setCanPlay] = useState(false);
 
   const getSignedUrls = async (filePath: string): Promise<string[]> => {
     console.log("Getting signed URLs for video parts...");
@@ -77,24 +76,6 @@ const Video = () => {
     }
   };
 
-  const refreshVideoUrl = async (filePath: string) => {
-    try {
-      const urls = await getSignedUrls(filePath);
-      if (urls.length === 0) {
-        throw new Error("No video parts found");
-      }
-      setVideoUrl(urls);
-      setLoadingProgress(0);
-    } catch (error: any) {
-      console.error("Error refreshing video URL:", error);
-      toast({
-        title: "Error refreshing video",
-        description: "Please refresh the page to continue watching",
-        variant: "destructive",
-      });
-    }
-  };
-
   useEffect(() => {
     const fetchVideo = async () => {
       try {
@@ -106,6 +87,14 @@ const Video = () => {
 
         if (error) throw error;
 
+        setVideo(data);
+
+        // Get all video part URLs
+        const urls = await getSignedUrls(data.file_path);
+        if (urls.length === 0) throw new Error("No video parts found");
+        setVideoUrl(urls);
+
+        // Update view count
         const { error: updateError } = await supabase
           .from("videos")
           .update({ views: (data.views || 0) + 1 })
@@ -113,9 +102,7 @@ const Video = () => {
 
         if (updateError) throw updateError;
 
-        setVideo(data);
-        await refreshVideoUrl(data.file_path);
-
+        // Get last playback position
         const lastPosition = localStorage.getItem(`video-progress-${id}`);
         if (lastPosition) {
           setPlayedSeconds(parseFloat(lastPosition));
@@ -137,10 +124,14 @@ const Video = () => {
     }
   }, [id, toast]);
 
-  const handleProgress = ({ playedSeconds }: { playedSeconds: number }) => {
-    if (canPlay) {
-      setPlayedSeconds(playedSeconds);
-      localStorage.setItem(`video-progress-${id}`, playedSeconds.toString());
+  const handleProgress = ({ played, loaded }: { played: number; loaded: number }) => {
+    setPlayedSeconds(played);
+    localStorage.setItem(`video-progress-${id}`, played.toString());
+    
+    // Update loading progress
+    setLoadingProgress(Math.round(loaded * 100));
+    if (loaded > 0.95) {
+      setIsVideoLoading(false);
     }
   };
 
@@ -154,84 +145,13 @@ const Video = () => {
     setIsBuffering(false);
   };
 
-  const handleError = async (error: any) => {
+  const handleError = (error: any) => {
     console.error("Video playback error:", error);
-    if (video) {
-      setCanPlay(false);
-      setIsVideoLoading(true);
-      setLoadingProgress(0);
-      await refreshVideoUrl(video.file_path);
-    }
-  };
-
-  const handleReady = () => {
-    console.log("Video ready to play");
-    if (playerRef.current) {
-      const videoElement = playerRef.current.getInternalPlayer();
-      if (videoElement) {
-        videoElement.setAttribute('preload', 'auto');
-
-        let lastLoadedPercent = 0;
-        const updateLoadingProgress = () => {
-          try {
-            if (videoElement.buffered && videoElement.buffered.length > 0 && videoElement.duration) {
-              const bufferedEnd = videoElement.buffered.end(videoElement.buffered.length - 1);
-              const duration = videoElement.duration;
-              const loadedPercent = Math.round((bufferedEnd / duration) * 100);
-              
-              console.log(`Buffered end: ${bufferedEnd}, Duration: ${duration}, Progress: ${loadedPercent}%`);
-              
-              if (loadedPercent !== lastLoadedPercent) {
-                setLoadingProgress(loadedPercent);
-                lastLoadedPercent = loadedPercent;
-
-                if (loadedPercent >= 95) {
-                  console.log("Video mostly loaded, enabling playback");
-                  setIsVideoLoading(false);
-                  setCanPlay(true);
-                }
-              }
-            } else {
-              console.log("Waiting for video metadata...");
-            }
-          } catch (error) {
-            console.error("Error updating progress:", error);
-          }
-        };
-
-        // Listen for metadata loading
-        videoElement.addEventListener('loadedmetadata', () => {
-          console.log("Video metadata loaded");
-          console.log(`Video duration: ${videoElement.duration}`);
-          updateLoadingProgress();
-        });
-
-        // Track loading progress
-        videoElement.addEventListener('progress', () => {
-          console.log("Progress event fired");
-          updateLoadingProgress();
-        });
-
-        // Additional loading events
-        videoElement.addEventListener('loadeddata', () => {
-          console.log("Initial video data loaded");
-          updateLoadingProgress();
-        });
-
-        videoElement.addEventListener('canplay', () => {
-          console.log("Video can start playing");
-          updateLoadingProgress();
-        });
-
-        videoElement.addEventListener('canplaythrough', () => {
-          console.log("Video can play through");
-          updateLoadingProgress();
-        });
-
-        console.log("Starting video load");
-        videoElement.load();
-      }
-    }
+    toast({
+      title: "Playback error",
+      description: "Error playing video. Please try refreshing the page.",
+      variant: "destructive",
+    });
   };
 
   if (loading) {
@@ -278,7 +198,7 @@ const Video = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8">
             <div className="rounded-lg overflow-hidden bg-black aspect-video mb-6 relative">
-              {isVideoLoading ? (
+              {isVideoLoading && loadingProgress < 100 ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
                   <div className="text-white text-center mb-4">
                     <div className="mb-2 text-lg font-medium">Loading video...</div>
@@ -289,20 +209,19 @@ const Video = () => {
                   </div>
                 </div>
               ) : (
-                <div className={`transition-opacity duration-300 ${canPlay ? 'opacity-100' : 'opacity-0'}`}>
+                <div className={`transition-opacity duration-300 ${!isVideoLoading ? 'opacity-100' : 'opacity-0'}`}>
                   <ReactPlayer
                     ref={playerRef}
                     url={videoUrl}
                     width="100%"
                     height="100%"
                     controls
-                    playing={canPlay}
+                    playing={!isVideoLoading}
                     playsinline
                     onProgress={handleProgress}
                     onBuffer={handleBuffer}
                     onBufferEnd={handleBufferEnd}
                     onError={handleError}
-                    onReady={handleReady}
                     progressInterval={1000}
                     config={{
                       file: {
@@ -313,11 +232,10 @@ const Video = () => {
                         forceVideo: true,
                       },
                     }}
-                    played={playedSeconds}
                   />
                 </div>
               )}
-              {isBuffering && canPlay && (
+              {isBuffering && !isVideoLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                   <div className="text-white">Buffering...</div>
                 </div>

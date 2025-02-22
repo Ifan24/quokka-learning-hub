@@ -16,6 +16,7 @@ interface VideoUploadDialogProps {
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 const ALLOWED_FILE_TYPES = ["video/mp4", "video/avi", "video/quicktime"];
+const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks for better upload handling
 
 export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) {
   const [open, setOpen] = useState(false);
@@ -26,48 +27,37 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
   const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
 
-  const generateThumbnail = (videoFile: File): Promise<Blob> => {
+  const generateThumbnail = async (videoFile: File): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const video = document.createElement('video');
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
       video.onloadeddata = () => {
-        // Seek to 1 second (or first frame if video is shorter)
         video.currentTime = Math.min(1, video.duration);
       };
 
       video.onseeked = () => {
-        // Set canvas dimensions to match video
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        
-        // Draw the current frame to canvas
         ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Convert canvas to blob
         canvas.toBlob(
           (blob) => {
-            if (blob) {
-              resolve(blob);
-            } else {
-              reject(new Error("Failed to generate thumbnail"));
-            }
+            if (blob) resolve(blob);
+            else reject(new Error("Failed to generate thumbnail"));
           },
           'image/jpeg',
           0.7
         );
       };
 
-      video.onerror = () => {
-        reject(new Error("Error loading video"));
-      };
-
+      video.onerror = () => reject(new Error("Error loading video"));
       video.src = URL.createObjectURL(videoFile);
     });
   };
 
-  const getVideoDuration = (file: File): Promise<string> => {
+  const getVideoDuration = (videoFile: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const video = document.createElement('video');
       video.preload = 'metadata';
@@ -80,12 +70,27 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
         resolve(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
       };
       
-      video.onerror = () => {
-        reject(new Error("Error loading video metadata"));
-      };
-      
-      video.src = URL.createObjectURL(file);
+      video.onerror = () => reject(new Error("Error loading video metadata"));
+      video.src = URL.createObjectURL(videoFile);
     });
+  };
+
+  const uploadChunk = async (
+    chunk: Uint8Array,
+    fileName: string,
+    partNumber: number,
+    isLastChunk: boolean
+  ): Promise<void> => {
+    const chunkFileName = isLastChunk && partNumber === 0 ? fileName : `${fileName}.part${partNumber}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from("videos")
+      .upload(chunkFileName, chunk, {
+        contentType: file?.type || 'video/mp4',
+        upsert: true
+      });
+
+    if (uploadError) throw uploadError;
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,19 +115,10 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
       return;
     }
 
-    // Set default title from filename (without extension)
     const fileName = selectedFile.name;
     const fileTitle = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
     setTitle(fileTitle);
     setFile(selectedFile);
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const handleUpload = async () => {
@@ -150,63 +146,55 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
     setUploadProgress(0);
 
     try {
-      // Get video duration
+      // Get video duration and generate thumbnail
       const duration = await getVideoDuration(file);
-      
-      // Generate thumbnail
       setUploadProgress(10);
+      
       const thumbnailBlob = await generateThumbnail(file);
-      
-      // Upload video to Supabase Storage
-      const videoExt = file.name.split(".").pop();
-      const videoFileName = `${crypto.randomUUID()}.${videoExt}`;
-
-      // Custom upload with progress
-      const videoBuffer = await file.arrayBuffer();
-      const videoUint8Array = new Uint8Array(videoBuffer);
-      const chunkSize = 1024 * 1024; // 1MB chunks
-      const totalChunks = Math.ceil(videoUint8Array.length / chunkSize);
-      
-      setUploadProgress(20); // Starting video upload
-
-      for (let i = 0; i < totalChunks; i++) {
-        const start = i * chunkSize;
-        const end = Math.min(start + chunkSize, videoUint8Array.length);
-        const chunk = videoUint8Array.slice(start, end);
-        
-        const { error: uploadError } = await supabase.storage
-          .from("videos")
-          .upload(
-            i === 0 ? videoFileName : `${videoFileName}.part${i}`,
-            chunk,
-            { upsert: true }
-          );
-
-        if (uploadError) throw uploadError;
-        
-        // Update progress (20% to 70% for video upload)
-        const progressPercent = 20 + Math.round((i + 1) / totalChunks * 50);
-        setUploadProgress(progressPercent);
-      }
+      setUploadProgress(20);
 
       // Upload thumbnail
-      setUploadProgress(75);
       const thumbnailFileName = `${crypto.randomUUID()}.jpg`;
       const { error: thumbnailUploadError } = await supabase.storage
         .from("thumbnails")
         .upload(thumbnailFileName, thumbnailBlob);
 
       if (thumbnailUploadError) throw thumbnailUploadError;
-
-      setUploadProgress(85);
+      setUploadProgress(30);
 
       // Get thumbnail URL
       const { data: { publicUrl: thumbnailUrl } } = supabase.storage
         .from("thumbnails")
         .getPublicUrl(thumbnailFileName);
 
+      // Prepare video upload
+      const videoFileName = `${crypto.randomUUID()}.${file.name.split(".").pop()}`;
+      const fileBuffer = await file.arrayBuffer();
+      const fileData = new Uint8Array(fileBuffer);
+      
+      // Split file into chunks
+      const chunks: Uint8Array[] = [];
+      for (let i = 0; i < fileData.length; i += CHUNK_SIZE) {
+        chunks.push(fileData.slice(i, i + CHUNK_SIZE));
+      }
+
+      // Upload chunks
+      const uploadPromises = chunks.map((chunk, index) => {
+        const progress = 30 + Math.round((index / chunks.length) * 50);
+        setUploadProgress(progress);
+        
+        return uploadChunk(
+          chunk,
+          videoFileName,
+          index,
+          chunks.length === 1
+        );
+      });
+
+      await Promise.all(uploadPromises);
+      setUploadProgress(80);
+
       // Create video record
-      setUploadProgress(90);
       const { error: dbError } = await supabase.from("videos").insert({
         title,
         description: description.trim() || null,
@@ -325,3 +313,12 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
     </Dialog>
   );
 }
+
+// Helper function for formatting file size
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
