@@ -29,6 +29,7 @@ const Video = () => {
   const [isBuffering, setIsBuffering] = useState(false);
   const playerRef = useRef<ReactPlayer>(null);
   const { toast } = useToast();
+  const [videoUrl, setVideoUrl] = useState<string>("");
 
   useEffect(() => {
     const fetchVideo = async () => {
@@ -49,16 +50,8 @@ const Video = () => {
 
         if (updateError) throw updateError;
 
-        // Get the public URL instead of a signed URL
-        const publicUrl = supabase.storage
-          .from("videos")
-          .getPublicUrl(data.file_path);
-
-        if (!publicUrl.data?.publicUrl) {
-          throw new Error("Could not get video URL");
-        }
-
-        setVideo({ ...data, file_path: publicUrl.data.publicUrl });
+        setVideo(data);
+        await refreshVideoUrl(data.file_path);
 
         // Load last watched position
         const lastPosition = localStorage.getItem(`video-progress-${id}`);
@@ -82,6 +75,26 @@ const Video = () => {
     }
   }, [id, toast]);
 
+  const refreshVideoUrl = async (filePath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("videos")
+        .createSignedUrl(filePath, 3600);
+
+      if (error) throw error;
+      if (!data?.signedUrl) throw new Error("Could not get video URL");
+
+      setVideoUrl(data.signedUrl);
+    } catch (error: any) {
+      console.error("Error refreshing video URL:", error);
+      toast({
+        title: "Error refreshing video",
+        description: "Please refresh the page to continue watching",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleProgress = ({ playedSeconds }: { playedSeconds: number }) => {
     setPlayedSeconds(playedSeconds);
     localStorage.setItem(`video-progress-${id}`, playedSeconds.toString());
@@ -97,14 +110,17 @@ const Video = () => {
     setIsBuffering(false);
   };
 
-  const handleError = (error: any) => {
+  const handleError = async (error: any) => {
     console.error("Video playback error:", error);
+    if (video) {
+      // Try to refresh the URL on error
+      await refreshVideoUrl(video.file_path);
+    }
   };
 
   const handleReady = () => {
     console.log("Video ready to play");
     if (playerRef.current) {
-      // Ensure video can play through
       const videoElement = playerRef.current.getInternalPlayer();
       if (videoElement) {
         videoElement.setAttribute('preload', 'auto');
@@ -125,7 +141,7 @@ const Video = () => {
     );
   }
 
-  if (!video) {
+  if (!video || !videoUrl) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container px-4 py-8 text-center">
@@ -159,7 +175,7 @@ const Video = () => {
             <div className="rounded-lg overflow-hidden bg-black aspect-video mb-6 relative">
               <ReactPlayer
                 ref={playerRef}
-                url={video.file_path}
+                url={videoUrl}
                 width="100%"
                 height="100%"
                 controls
@@ -178,8 +194,6 @@ const Video = () => {
                       controlsList: "nodownload",
                     },
                     forceVideo: true,
-                    forceFLV: false,
-                    forceHLS: false,
                   },
                 }}
                 played={playedSeconds}
