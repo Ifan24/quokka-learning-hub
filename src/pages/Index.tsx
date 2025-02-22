@@ -81,15 +81,15 @@ const Index = () => {
               Manage your private video content and learning materials
             </p>
           </div>
-          <div className="flex w-full md:w-auto gap-4">
+          <div className="flex w-full md:w-auto items-center gap-4">
             <Input
               placeholder="Search in my videos..."
               className="max-w-sm"
             />
             <VideoUploadDialog onUploadComplete={handleUploadComplete}>
-              <Button variant="default" className="whitespace-nowrap bg-primary hover:bg-primary/90 text-white">
+              <Button variant="default" className="inline-flex whitespace-nowrap shrink-0 bg-primary hover:bg-primary/90 text-white">
                 <Upload className="w-4 h-4" />
-                Upload New Video
+                <span className="ml-2">Upload New Video</span>
               </Button>
             </VideoUploadDialog>
           </div>
