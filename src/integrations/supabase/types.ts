@@ -33,6 +33,35 @@ export type Database = {
         }
         Relationships: []
       }
+      quizzes: {
+        Row: {
+          created_at: string
+          id: string
+          questions: Json
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          questions: Json
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          questions?: Json
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       videos: {
         Row: {
           audio_file_path: string | null

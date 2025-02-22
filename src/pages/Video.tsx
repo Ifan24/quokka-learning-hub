@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +9,7 @@ import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { VideoInfo } from "@/components/video/VideoInfo";
 import { Transcription } from "@/components/video/Transcription";
 import { VideoChat } from "@/components/video/VideoChat";
+import { VideoQuiz } from "@/components/video/VideoQuiz";
 import type { VideoDetails, TranscriptionChunk } from "@/types/video";
 
 const Video = () => {
@@ -17,7 +18,15 @@ const Video = () => {
   const [loading, setLoading] = useState(true);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const { toast } = useToast();
+
+  const handleSeek = (time: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = time;
+      videoRef.current.play();
+    }
+  };
 
   useEffect(() => {
     const fetchVideo = async () => {
@@ -187,7 +196,7 @@ const Video = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8">
-            <VideoPlayer url={videoUrl} />
+            <VideoPlayer url={videoUrl} ref={videoRef} />
             <VideoInfo video={video} />
           </div>
 
@@ -197,6 +206,7 @@ const Video = () => {
               isTranscribing={isTranscribing}
               onTranscribe={startTranscription}
             />
+            <VideoQuiz video={video} onSeek={handleSeek} />
             <VideoChat video={video} />
           </div>
         </div>
