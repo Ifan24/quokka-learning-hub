@@ -38,9 +38,8 @@ export const VideoQuiz = ({
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const {
-    toast
-  } = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadQuizzes();
@@ -178,19 +177,27 @@ export const VideoQuiz = ({
   };
 
   const deleteQuiz = async () => {
-    if (!quizzes.length) return;
+    if (!quizzes.length || isDeleting) return;
+    
     const quizToDelete = quizzes[currentQuizIndex];
+    setIsDeleting(true);
+    
     try {
-      const {
-        error
-      } = await supabase.from("quizzes").delete().eq("id", quizToDelete.id);
+      const { error } = await supabase
+        .from("quizzes")
+        .delete()
+        .eq("id", quizToDelete.id);
+      
       if (error) throw error;
+
       setQuizzes(prev => prev.filter(quiz => quiz.id !== quizToDelete.id));
+      
       if (currentQuizIndex >= quizzes.length - 1) {
         setCurrentQuizIndex(Math.max(0, quizzes.length - 2));
       }
       setCurrentQuestionIndex(0);
       setSelectedAnswer(null);
+      
       toast({
         title: "Quiz Deleted",
         description: "The quiz has been successfully deleted."
@@ -202,6 +209,8 @@ export const VideoQuiz = ({
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -241,9 +250,14 @@ export const VideoQuiz = ({
                 variant="outline"
                 size="icon"
                 onClick={deleteQuiz}
+                disabled={isDeleting}
                 className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
               >
-                <Trash2 className="h-4 w-4" />
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
               </Button>
             </div>
             <div className="text-sm text-muted-foreground whitespace-nowrap">
