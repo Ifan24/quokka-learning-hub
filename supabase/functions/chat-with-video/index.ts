@@ -31,7 +31,6 @@ serve(async (req) => {
 
     // Configure FAL client with API key
     fal.config({
-      requestTimeout: 60000, // Increase timeout to 60 seconds
       credentials: apiKey,
     });
 
@@ -44,7 +43,7 @@ Question: ${question}
 
 Please provide a clear and concise answer based solely on the information provided in the transcription.`
 
-    console.log('Starting FAL AI stream...');
+    console.log('Starting FAL AI request...');
 
     // Create a TransformStream for streaming the response
     const stream = new TransformStream()
@@ -61,27 +60,34 @@ Please provide a clear and concise answer based solely on the information provid
     // Process the stream in the background
     const processStream = async () => {
       try {
-        console.log('Initializing FAL AI stream...');
+        console.log('Making FAL AI request...');
         
-        const result = await fal.stream('fal-ai/any-llm', {
+        const result = await fal.subscribe('fal-ai/any-llm', {
           input: {
-            model: 'anthropic/claude-3.5-sonnet',
+            model: 'anthropic/claude-3-sonnet',
             prompt: prompt,
             stream: true,
-            reasoning: false,
           },
+          logs: true,
+          onError: async (error) => {
+            console.error('FAL AI error:', error);
+            await writer.write(
+              new TextEncoder().encode(
+                JSON.stringify({ error: error.message }) + '\n'
+              )
+            );
+          }
         });
 
-        console.log('Stream initialized, processing events...');
+        console.log('Request initialized, processing response...');
         
         for await (const event of result) {
           console.log('Received event:', event);
           
-          if (event.data?.output) {
-            const chunk = event.data.output;
+          if (event.output) {
             await writer.write(
               new TextEncoder().encode(
-                JSON.stringify({ delta: chunk }) + '\n'
+                JSON.stringify({ delta: event.output }) + '\n'
               )
             );
           }
