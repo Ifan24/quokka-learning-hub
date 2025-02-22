@@ -47,22 +47,38 @@ serve(async (req) => {
       },
     })
 
-    console.log('Transcription completed:', result)
+    console.log('Processing FAL API response...')
+    
+    // Extract and format the transcription data
+    const transcriptionData = {
+      text: result.data.text,
+      chunks: result.data.chunks.map((chunk: any) => ({
+        timestamp: chunk.timestamp,
+        text: chunk.text
+      }))
+    }
+
+    console.log('Updating database with transcription data...')
 
     // Update video record with transcription data
     const { error: updateError } = await supabase
       .from('videos')
       .update({
         transcription_status: 'completed',
-        transcription_text: result.text,
-        transcription_chunks: result.chunks
+        transcription_text: transcriptionData.text,
+        transcription_chunks: transcriptionData.chunks
       })
       .eq('id', videoId)
 
-    if (updateError) throw updateError
+    if (updateError) {
+      console.error('Error updating video:', updateError)
+      throw updateError
+    }
+
+    console.log('Transcription process completed successfully')
 
     return new Response(
-      JSON.stringify({ success: true, result }),
+      JSON.stringify({ success: true, result: transcriptionData }),
       { 
         headers: { 
           ...corsHeaders, 
