@@ -38,7 +38,7 @@ const Video = () => {
           .from("videos")
           .select(`
             *,
-            user:profiles(
+            user:profiles!videos_user_id_fkey(
               full_name
             )
           `)
