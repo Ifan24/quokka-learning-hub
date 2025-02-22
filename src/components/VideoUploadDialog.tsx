@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import { Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,8 +23,7 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
 
   const generateThumbnail = (videoFile: File): Promise<Blob> => {
@@ -135,7 +135,6 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
       return;
     }
 
-    // Get the current user
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -148,24 +147,50 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
     }
 
     setUploading(true);
+    setUploadProgress(0);
 
     try {
       // Get video duration
       const duration = await getVideoDuration(file);
       
       // Generate thumbnail
+      setUploadProgress(10);
       const thumbnailBlob = await generateThumbnail(file);
       
       // Upload video to Supabase Storage
       const videoExt = file.name.split(".").pop();
       const videoFileName = `${crypto.randomUUID()}.${videoExt}`;
-      const { error: videoUploadError } = await supabase.storage
-        .from("videos")
-        .upload(videoFileName, file);
 
-      if (videoUploadError) throw videoUploadError;
+      // Custom upload with progress
+      const videoBuffer = await file.arrayBuffer();
+      const videoUint8Array = new Uint8Array(videoBuffer);
+      const chunkSize = 1024 * 1024; // 1MB chunks
+      const totalChunks = Math.ceil(videoUint8Array.length / chunkSize);
+      
+      setUploadProgress(20); // Starting video upload
 
-      // Upload thumbnail to Supabase Storage
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, videoUint8Array.length);
+        const chunk = videoUint8Array.slice(start, end);
+        
+        const { error: uploadError } = await supabase.storage
+          .from("videos")
+          .upload(
+            i === 0 ? videoFileName : `${videoFileName}.part${i}`,
+            chunk,
+            { upsert: true }
+          );
+
+        if (uploadError) throw uploadError;
+        
+        // Update progress (20% to 70% for video upload)
+        const progressPercent = 20 + Math.round((i + 1) / totalChunks * 50);
+        setUploadProgress(progressPercent);
+      }
+
+      // Upload thumbnail
+      setUploadProgress(75);
       const thumbnailFileName = `${crypto.randomUUID()}.jpg`;
       const { error: thumbnailUploadError } = await supabase.storage
         .from("thumbnails")
@@ -173,12 +198,15 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
 
       if (thumbnailUploadError) throw thumbnailUploadError;
 
-      // Get thumbnail URL using the correct path
+      setUploadProgress(85);
+
+      // Get thumbnail URL
       const { data: { publicUrl: thumbnailUrl } } = supabase.storage
         .from("thumbnails")
         .getPublicUrl(thumbnailFileName);
 
-      // Create video record in the database
+      // Create video record
+      setUploadProgress(90);
       const { error: dbError } = await supabase.from("videos").insert({
         title,
         description: description.trim() || null,
@@ -191,6 +219,7 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
 
       if (dbError) throw dbError;
 
+      setUploadProgress(100);
       toast({
         title: "Success",
         description: "Video uploaded successfully",
@@ -206,6 +235,7 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
       });
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -213,6 +243,7 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
     setFile(null);
     setTitle("");
     setDescription("");
+    setUploadProgress(0);
   };
 
   return (
@@ -266,6 +297,14 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
               </p>
             )}
           </div>
+          {uploading && (
+            <div className="grid gap-2">
+              <Progress value={uploadProgress} className="w-full" />
+              <p className="text-sm text-muted-foreground text-center">
+                {uploadProgress}% uploaded
+              </p>
+            </div>
+          )}
         </div>
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={() => setOpen(false)}>
