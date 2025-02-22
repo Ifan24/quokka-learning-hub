@@ -31,9 +31,7 @@ export const useVideoDetails = (id: string | undefined) => {
           .from("videos")
           .select(`
             *,
-            user:profiles!videos_user_id_fkey(
-              full_name
-            )
+            user:profiles(full_name)
           `)
           .eq("id", id)
           .maybeSingle();
@@ -67,6 +65,7 @@ export const useVideoDetails = (id: string | undefined) => {
           user: Array.isArray(videoData.user) ? videoData.user[0] : videoData.user
         });
       } catch (error: any) {
+        console.error("Video loading error:", error);  // Add detailed error logging
         toast({
           title: "Error loading video",
           description: error.message,
