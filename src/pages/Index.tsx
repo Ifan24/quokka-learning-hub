@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Navigation from "@/components/Navigation";
 import StatsCard from "@/components/StatsCard";
 import VideoCard from "@/components/VideoCard";
 import { Clock, Film, Upload, User } from "lucide-react";
@@ -74,7 +73,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       <main className="container px-4 py-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
           <div>
@@ -88,7 +86,12 @@ const Index = () => {
               placeholder="Search in my videos..."
               className="max-w-sm"
             />
-            <VideoUploadDialog onUploadComplete={handleUploadComplete} />
+            <VideoUploadDialog onUploadComplete={handleUploadComplete}>
+              <Button variant="default" className="whitespace-nowrap bg-primary hover:bg-primary/90 text-white">
+                <Upload className="w-4 h-4" />
+                Upload New Video
+              </Button>
+            </VideoUploadDialog>
           </div>
         </div>
 
