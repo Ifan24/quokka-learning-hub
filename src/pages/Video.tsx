@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import ReactPlayer from "react-player";
@@ -31,69 +32,9 @@ const Video = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const playerRef = useRef<ReactPlayer>(null);
   const { toast } = useToast();
-  const [videoUrl, setVideoUrl] = useState<string[]>([]);
-  const [canPlay, setCanPlay] = useState(false);
-
-  const getSignedUrls = async (filePath: string): Promise<string[]> => {
-    console.log("Getting signed URLs for video parts...");
-    const urls: string[] = [];
-    let partIndex = 0;
-    let hasMoreParts = true;
-
-    try {
-      // Get the base file
-      const { data: baseData, error: baseError } = await supabase.storage
-        .from("videos")
-        .createSignedUrl(filePath, 7200);
-
-      if (baseError) throw baseError;
-      if (baseData?.signedUrl) {
-        console.log("Got base file URL");
-        urls.push(baseData.signedUrl);
-      }
-
-      // Get all the parts
-      while (hasMoreParts) {
-        const partPath = `${filePath}.part${partIndex}`;
-        const { data, error } = await supabase.storage
-          .from("videos")
-          .createSignedUrl(partPath, 7200);
-
-        if (error) {
-          console.log(`No more parts found after part${partIndex}`);
-          hasMoreParts = false;
-        } else if (data?.signedUrl) {
-          console.log(`Got URL for part${partIndex}`);
-          urls.push(data.signedUrl);
-          partIndex++;
-        }
-      }
-
-      console.log(`Total video parts found: ${urls.length}`);
-      return urls;
-    } catch (error) {
-      console.error("Error getting signed URLs:", error);
-      throw error;
-    }
-  };
-
-  const refreshVideoUrl = async (filePath: string) => {
-    try {
-      const urls = await getSignedUrls(filePath);
-      if (urls.length === 0) {
-        throw new Error("No video parts found");
-      }
-      setVideoUrl(urls);
-      setLoadingProgress(0);
-    } catch (error: any) {
-      console.error("Error refreshing video URL:", error);
-      toast({
-        title: "Error refreshing video",
-        description: "Please refresh the page to continue watching",
-        variant: "destructive",
-      });
-    }
-  };
+  const [videoUrls, setVideoUrls] = useState<string[]>([]);
+  const [currentPart, setCurrentPart] = useState(0);
+  const [totalParts, setTotalParts] = useState(0);
 
   useEffect(() => {
     const fetchVideo = async () => {
@@ -106,20 +47,47 @@ const Video = () => {
 
         if (error) throw error;
 
-        const { error: updateError } = await supabase
+        setVideo(data);
+
+        // Get signed URL for main video file
+        const { data: mainData, error: mainError } = await supabase.storage
+          .from("videos")
+          .createSignedUrl(data.file_path, 7200);
+
+        if (mainError) throw mainError;
+        
+        // Collect all video parts
+        const urls: string[] = [];
+        if (mainData?.signedUrl) {
+          urls.push(mainData.signedUrl);
+        }
+
+        let partIndex = 0;
+        let hasMoreParts = true;
+
+        while (hasMoreParts) {
+          const { data: partData, error: partError } = await supabase.storage
+            .from("videos")
+            .createSignedUrl(`${data.file_path}.part${partIndex}`, 7200);
+
+          if (partError) {
+            hasMoreParts = false;
+          } else if (partData?.signedUrl) {
+            urls.push(partData.signedUrl);
+            partIndex++;
+          }
+        }
+
+        console.log(`Found ${urls.length} video parts`);
+        setVideoUrls(urls);
+        setTotalParts(urls.length);
+
+        // Update view count
+        await supabase
           .from("videos")
           .update({ views: (data.views || 0) + 1 })
           .eq("id", id);
 
-        if (updateError) throw updateError;
-
-        setVideo(data);
-        await refreshVideoUrl(data.file_path);
-
-        const lastPosition = localStorage.getItem(`video-progress-${id}`);
-        if (lastPosition) {
-          setPlayedSeconds(parseFloat(lastPosition));
-        }
       } catch (error: any) {
         console.error("Error loading video:", error);
         toast({
@@ -137,101 +105,37 @@ const Video = () => {
     }
   }, [id, toast]);
 
-  const handleProgress = ({ playedSeconds }: { playedSeconds: number }) => {
-    if (canPlay) {
-      setPlayedSeconds(playedSeconds);
-      localStorage.setItem(`video-progress-${id}`, playedSeconds.toString());
+  const handleProgress = ({ played, loaded, playedSeconds }: { played: number; loaded: number; playedSeconds: number }) => {
+    setPlayedSeconds(playedSeconds);
+    
+    // Calculate overall progress considering current part
+    const overallProgress = ((currentPart + loaded) / totalParts) * 100;
+    setLoadingProgress(Math.round(overallProgress));
+
+    // Save current position
+    localStorage.setItem(`video-progress-${id}`, playedSeconds.toString());
+    
+    if (loaded >= 0.95 && isVideoLoading) {
+      console.log(`Part ${currentPart + 1}/${totalParts} loaded`);
+      setIsVideoLoading(false);
     }
   };
 
-  const handleBuffer = () => {
-    console.log("Video buffering...");
-    setIsBuffering(true);
-  };
-
-  const handleBufferEnd = () => {
-    console.log("Video buffering ended");
-    setIsBuffering(false);
-  };
-
-  const handleError = async (error: any) => {
-    console.error("Video playback error:", error);
-    if (video) {
-      setCanPlay(false);
+  const handleEnded = () => {
+    if (currentPart < videoUrls.length - 1) {
+      console.log(`Moving to part ${currentPart + 2}/${totalParts}`);
+      setCurrentPart(currentPart + 1);
       setIsVideoLoading(true);
-      setLoadingProgress(0);
-      await refreshVideoUrl(video.file_path);
     }
   };
 
-  const handleReady = () => {
-    console.log("Video ready to play");
-    if (playerRef.current) {
-      const videoElement = playerRef.current.getInternalPlayer();
-      if (videoElement) {
-        videoElement.setAttribute('preload', 'auto');
-
-        let lastLoadedPercent = 0;
-        const updateLoadingProgress = () => {
-          try {
-            if (videoElement.buffered && videoElement.buffered.length > 0 && videoElement.duration) {
-              const bufferedEnd = videoElement.buffered.end(videoElement.buffered.length - 1);
-              const duration = videoElement.duration;
-              const loadedPercent = Math.round((bufferedEnd / duration) * 100);
-              
-              console.log(`Buffered end: ${bufferedEnd}, Duration: ${duration}, Progress: ${loadedPercent}%`);
-              
-              if (loadedPercent !== lastLoadedPercent) {
-                setLoadingProgress(loadedPercent);
-                lastLoadedPercent = loadedPercent;
-
-                if (loadedPercent >= 95) {
-                  console.log("Video mostly loaded, enabling playback");
-                  setIsVideoLoading(false);
-                  setCanPlay(true);
-                }
-              }
-            } else {
-              console.log("Waiting for video metadata...");
-            }
-          } catch (error) {
-            console.error("Error updating progress:", error);
-          }
-        };
-
-        // Listen for metadata loading
-        videoElement.addEventListener('loadedmetadata', () => {
-          console.log("Video metadata loaded");
-          console.log(`Video duration: ${videoElement.duration}`);
-          updateLoadingProgress();
-        });
-
-        // Track loading progress
-        videoElement.addEventListener('progress', () => {
-          console.log("Progress event fired");
-          updateLoadingProgress();
-        });
-
-        // Additional loading events
-        videoElement.addEventListener('loadeddata', () => {
-          console.log("Initial video data loaded");
-          updateLoadingProgress();
-        });
-
-        videoElement.addEventListener('canplay', () => {
-          console.log("Video can start playing");
-          updateLoadingProgress();
-        });
-
-        videoElement.addEventListener('canplaythrough', () => {
-          console.log("Video can play through");
-          updateLoadingProgress();
-        });
-
-        console.log("Starting video load");
-        videoElement.load();
-      }
-    }
+  const handleError = (error: any) => {
+    console.error("Video playback error:", error);
+    toast({
+      title: "Playback Error",
+      description: "Failed to play video part. Please try refreshing the page.",
+      variant: "destructive",
+    });
   };
 
   if (loading) {
@@ -247,7 +151,7 @@ const Video = () => {
     );
   }
 
-  if (!video || videoUrl.length === 0) {
+  if (!video || videoUrls.length === 0) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container px-4 py-8 text-center">
@@ -278,46 +182,43 @@ const Video = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8">
             <div className="rounded-lg overflow-hidden bg-black aspect-video mb-6 relative">
-              {isVideoLoading ? (
+              {isVideoLoading && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
                   <div className="text-white text-center mb-4">
                     <div className="mb-2 text-lg font-medium">Loading video...</div>
-                    <div className="text-sm text-gray-300">{loadingProgress}% loaded</div>
+                    <div className="text-sm text-gray-300">
+                      Part {currentPart + 1}/{totalParts} ({Math.round(loadingProgress)}% overall)
+                    </div>
                   </div>
                   <div className="w-64">
                     <Progress value={loadingProgress} className="h-2" />
                   </div>
                 </div>
-              ) : (
-                <div className={`transition-opacity duration-300 ${canPlay ? 'opacity-100' : 'opacity-0'}`}>
-                  <ReactPlayer
-                    ref={playerRef}
-                    url={videoUrl}
-                    width="100%"
-                    height="100%"
-                    controls
-                    playing={canPlay}
-                    playsinline
-                    onProgress={handleProgress}
-                    onBuffer={handleBuffer}
-                    onBufferEnd={handleBufferEnd}
-                    onError={handleError}
-                    onReady={handleReady}
-                    progressInterval={1000}
-                    config={{
-                      file: {
-                        attributes: {
-                          preload: "auto",
-                          controlsList: "nodownload",
-                        },
-                        forceVideo: true,
-                      },
-                    }}
-                    played={playedSeconds}
-                  />
-                </div>
               )}
-              {isBuffering && canPlay && (
+              <div className={`transition-opacity duration-300 ${!isVideoLoading ? 'opacity-100' : 'opacity-0'}`}>
+                <ReactPlayer
+                  ref={playerRef}
+                  url={videoUrls[currentPart]}
+                  width="100%"
+                  height="100%"
+                  controls
+                  playing={!isVideoLoading}
+                  onProgress={handleProgress}
+                  onEnded={handleEnded}
+                  onError={handleError}
+                  progressInterval={500}
+                  config={{
+                    file: {
+                      attributes: {
+                        preload: "auto",
+                        controlsList: "nodownload",
+                      },
+                      forceVideo: true,
+                    },
+                  }}
+                />
+              </div>
+              {isBuffering && !isVideoLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                   <div className="text-white">Buffering...</div>
                 </div>
