@@ -53,6 +53,10 @@ serve(async (req) => {
       return `[${Math.floor(startTime/60)}:${Math.floor(startTime%60).toString().padStart(2, '0')} - ${Math.floor(endTime/60)}:${Math.floor(endTime%60).toString().padStart(2, '0')}] ${chunk.text}`;
     }).join("\n");
 
+    // Get video duration range
+    const minTimestamp = Math.min(...transcription_chunks.map((chunk: any) => chunk.timestamp[0]));
+    const maxTimestamp = Math.max(...transcription_chunks.map((chunk: any) => chunk.timestamp[1]));
+
     fal.config({
       credentials: apiKey,
     });
@@ -64,6 +68,8 @@ Title: ${title}
 
 Content (with timestamps):
 ${formattedChunks}
+
+Valid timestamp range: ${minTimestamp} to ${maxTimestamp} seconds.
 
 ${existingQuestions?.length ? `\nPreviously generated questions (DO NOT generate similar or identical questions):\n- ${existingQuestions.join("\n- ")}` : ''}
 
@@ -82,12 +88,12 @@ Please generate 5 UNIQUE and DIFFERENT multiple-choice questions in the followin
 
 Requirements:
 1. Questions should be challenging but fair
-2. IMPORTANT: Use the exact timestamps from the transcription chunks where the answer can be found. The timestamp should be the starting time (first number) from the relevant chunk.
+2. IMPORTANT: Use timestamps within the valid range (${minTimestamp} to ${maxTimestamp} seconds)
 3. Provide 4 choices for each question
 4. Include clear explanations for the correct answers
 5. Return valid JSON that exactly matches the format above
 6. Do not include any text outside of the JSON structure
-7. VERY IMPORTANT: Generate completely different questions from the ones listed above - do not repeat or rephrase existing questions`;
+7. Generate completely different questions from the ones listed above`;
 
     console.log("Sending request to FAL AI...");
 
@@ -120,7 +126,7 @@ Requirements:
         throw new Error("Invalid quiz data structure");
       }
 
-      // Validate each question and ensure timestamp exists in chunks
+      // Validate each question
       quizData.questions.forEach((q: any, index: number) => {
         if (
           typeof q.timestamp !== 'number' ||
@@ -135,15 +141,9 @@ Requirements:
           throw new Error(`Invalid question format at index ${index}`);
         }
 
-        // Verify that the timestamp exists in one of the chunks
-        const timestampExists = transcription_chunks.some(
-          (chunk: any) => 
-            q.timestamp >= chunk.timestamp[0] && 
-            q.timestamp <= chunk.timestamp[1]
-        );
-
-        if (!timestampExists) {
-          throw new Error(`Question ${index + 1} has an invalid timestamp that doesn't match any transcription chunk`);
+        // Verify timestamp is within the valid range
+        if (q.timestamp < minTimestamp || q.timestamp > maxTimestamp) {
+          throw new Error(`Question ${index + 1} timestamp (${q.timestamp}) is outside the valid range (${minTimestamp}-${maxTimestamp})`);
         }
       });
 

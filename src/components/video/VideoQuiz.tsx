@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -6,11 +7,30 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Quiz, QuizQuestion } from "@/types/quiz";
 import type { VideoDetails } from "@/types/video";
+import type { Json } from "@/integrations/supabase/types";
 
 interface VideoQuizProps {
   video: VideoDetails;
   onSeek: (time: number) => void;
 }
+
+// Type guard to validate quiz question format
+const isValidQuizQuestion = (q: Json): q is QuizQuestion => {
+  if (!q || typeof q !== 'object') return false;
+  return (
+    typeof (q as any).timestamp === 'number' &&
+    typeof (q as any).question === 'string' &&
+    Array.isArray((q as any).choices) &&
+    (q as any).choices.length === 4 &&
+    typeof (q as any).correctAnswer === 'number' &&
+    typeof (q as any).explanation === 'string'
+  );
+};
+
+// Type guard to validate array of quiz questions
+const isValidQuizQuestionArray = (questions: Json): questions is QuizQuestion[] => {
+  return Array.isArray(questions) && questions.every(isValidQuizQuestion);
+};
 
 export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -35,19 +55,20 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
 
       if (error) throw error;
 
-      // Cast the data to Quiz type after basic validation
-      const validQuizzes = (data || []).filter(quiz => 
-        Array.isArray(quiz.questions) && 
-        quiz.questions.every(q => 
-          typeof q === 'object' &&
-          q !== null &&
-          typeof (q as any).timestamp === 'number' &&
-          typeof (q as any).question === 'string' &&
-          Array.isArray((q as any).choices) &&
-          (q as any).choices.length === 4 &&
-          typeof (q as any).correctAnswer === 'number'
-        )
-      ) as Quiz[];
+      const validQuizzes: Quiz[] = [];
+      
+      for (const rawQuiz of data || []) {
+        if (isValidQuizQuestionArray(rawQuiz.questions)) {
+          validQuizzes.push({
+            id: rawQuiz.id,
+            video_id: rawQuiz.video_id,
+            questions: rawQuiz.questions,
+            created_at: rawQuiz.created_at
+          });
+        } else {
+          console.warn("Invalid quiz data found:", rawQuiz);
+        }
+      }
 
       setQuizzes(validQuizzes);
     } catch (error: any) {
