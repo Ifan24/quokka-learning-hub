@@ -35,17 +35,17 @@ export const useVideoDetails = (id: string | undefined) => {
           return;
         }
 
-        // Get video URL - this should return the full public URL for the video file
-        const { data } = supabase.storage
+        // Get video URL
+        const { data: { publicUrl } } = supabase.storage
           .from("videos")
           .getPublicUrl(videoData.file_path);
 
-        console.log("Video URL:", data.publicUrl); // Debug log
+        console.log("Video URL:", publicUrl); // Debug log
 
         setVideo({
           id: videoData.id,
           title: videoData.title,
-          file_path: data.publicUrl
+          file_path: publicUrl
         });
       } catch (error: any) {
         console.error("Video loading error:", error);

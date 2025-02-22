@@ -39,6 +39,9 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
         return;
       }
       setFile(selectedFile);
+      // Set the title to the file name without extension
+      const fileName = selectedFile.name.split('.').slice(0, -1).join('.');
+      setTitle(fileName);
     }
   };
 
@@ -72,6 +75,13 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
         });
 
       if (uploadError) throw uploadError;
+
+      // Get the public URL for verification
+      const { data: { publicUrl } } = supabase.storage
+        .from("videos")
+        .getPublicUrl(filePath);
+
+      console.log("Uploaded video URL:", publicUrl); // Debug log
 
       // Insert video metadata into the database
       const { error: dbError } = await supabase
