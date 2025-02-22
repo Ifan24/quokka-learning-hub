@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Wand2, Loader2, Play, ArrowLeft, ArrowRight, Check, X, ChevronUp, ChevronDown } from "lucide-react";
+import { Wand2, Loader2, Play, ArrowLeft, ArrowRight, Check, X, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Quiz, QuizQuestion } from "@/types/quiz";
@@ -14,7 +13,6 @@ interface VideoQuizProps {
   onSeek: (time: number) => void;
 }
 
-// Helper function to validate quiz question structure
 const validateQuizQuestion = (q: Json): boolean => {
   if (!q || typeof q !== 'object') return false;
   return (
@@ -27,7 +25,6 @@ const validateQuizQuestion = (q: Json): boolean => {
   );
 };
 
-// Helper function to convert validated Json to QuizQuestion
 const convertToQuizQuestion = (q: Json): QuizQuestion => {
   return {
     timestamp: (q as any).timestamp,
@@ -193,6 +190,41 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
     }
   };
 
+  const deleteQuiz = async () => {
+    if (!quizzes.length) return;
+    
+    const quizToDelete = quizzes[currentQuizIndex];
+    
+    try {
+      const { error } = await supabase
+        .from("quizzes")
+        .delete()
+        .eq("id", quizToDelete.id);
+
+      if (error) throw error;
+
+      setQuizzes((prev) => prev.filter(quiz => quiz.id !== quizToDelete.id));
+      
+      if (currentQuizIndex >= quizzes.length - 1) {
+        setCurrentQuizIndex(Math.max(0, quizzes.length - 2));
+      }
+      setCurrentQuestionIndex(0);
+      setSelectedAnswer(null);
+
+      toast({
+        title: "Quiz Deleted",
+        description: "The quiz has been successfully deleted.",
+      });
+    } catch (error: any) {
+      console.error("Error deleting quiz:", error);
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const renderCurrentQuestion = () => {
     if (quizzes.length === 0) return null;
 
@@ -224,6 +256,14 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
                 disabled={currentQuizIndex === quizzes.length - 1}
               >
                 <ChevronDown className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={deleteQuiz}
+                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
             <div className="text-sm text-muted-foreground">
