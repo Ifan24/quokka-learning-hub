@@ -47,16 +47,10 @@ const Video = () => {
 
         if (updateError) throw updateError;
 
-        // Get signed URL with proper headers for streaming
+        // Get signed URL for the full video without transformations
         const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from("videos")
-          .createSignedUrl(data.file_path, 3600, {
-            transform: {
-              width: 1920,
-              height: 1080,
-              quality: 75,
-            }
-          });
+          .createSignedUrl(data.file_path, 3600);
 
         if (signedUrlError) throw signedUrlError;
 
@@ -146,13 +140,11 @@ const Video = () => {
                   file: {
                     attributes: {
                       controlsList: "nodownload",
-                      preload: "auto",
+                      preload: "metadata",
                     },
                     forceVideo: true,
-                    hlsOptions: {
-                      enableWorker: true,
-                      debug: false,
-                    },
+                    forceHLS: false,
+                    forceFLV: false,
                   },
                 }}
                 played={playedSeconds}
