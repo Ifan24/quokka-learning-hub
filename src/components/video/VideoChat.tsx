@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { MessageCircle, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import type { VideoDetails } from "@/types/video";
 
 interface VideoChatProps {
@@ -30,12 +31,14 @@ export const VideoChat = ({ video }: VideoChatProps) => {
     setIsLoading(true);
 
     try {
-      const { data: urlData } = await supabase.functions.invoke("chat-with-video", {
+      const { data, error } = await supabase.functions.invoke("chat-with-video", {
         body: {
           question: input,
           transcription: video.transcription_text,
         },
       });
+
+      if (error) throw error;
 
       if (data?.output) {
         setMessages(prev => [...prev, {
