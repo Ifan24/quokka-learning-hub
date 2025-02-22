@@ -9,6 +9,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -28,9 +29,11 @@ serve(async (req) => {
       throw new Error('FAL_API_KEY is not configured');
     }
 
+    // Configure FAL client with API key
     fal.config({
+      requestTimeout: 60000, // Increase timeout to 60 seconds
       credentials: apiKey,
-    })
+    });
 
     const prompt = `Based on the following video transcription, answer the question.
     
@@ -52,7 +55,6 @@ Please provide a clear and concise answer based solely on the information provid
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
-        'Transfer-Encoding': 'chunked',
       },
     })
 
@@ -60,25 +62,32 @@ Please provide a clear and concise answer based solely on the information provid
     const processStream = async () => {
       try {
         console.log('Initializing FAL AI stream...');
-        const stream = await fal.stream("fal-ai/any-llm", {
+        
+        const result = await fal.stream('fal-ai/any-llm', {
           input: {
-            model: "anthropic/claude-3.5-sonnet",
+            model: 'anthropic/claude-3.5-sonnet',
             prompt: prompt,
-            reasoning: false
-          }
+            stream: true,
+            reasoning: false,
+          },
         });
 
         console.log('Stream initialized, processing events...');
-        for await (const event of stream) {
+        
+        for await (const event of result) {
           console.log('Received event:', event);
+          
           if (event.data?.output) {
+            const chunk = event.data.output;
             await writer.write(
               new TextEncoder().encode(
-                JSON.stringify({ delta: event.data.output }) + '\n'
+                JSON.stringify({ delta: chunk }) + '\n'
               )
             );
           }
         }
+
+        console.log('Stream completed successfully');
       } catch (error) {
         console.error('Streaming error:', error);
         await writer.write(
