@@ -5,6 +5,7 @@ import ReactPlayer from "react-player";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, Eye, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +29,7 @@ const Video = () => {
   const [isVideoLoading, setIsVideoLoading] = useState(true);
   const [playedSeconds, setPlayedSeconds] = useState(0);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const playerRef = useRef<ReactPlayer>(null);
   const { toast } = useToast();
   const [videoUrl, setVideoUrl] = useState<string>("");
@@ -79,12 +81,13 @@ const Video = () => {
     try {
       const { data, error } = await supabase.storage
         .from("videos")
-        .createSignedUrl(filePath, 7200); // Increased to 2 hours
+        .createSignedUrl(filePath, 7200); // 2 hours
 
       if (error) throw error;
       if (!data?.signedUrl) throw new Error("Could not get video URL");
 
       setVideoUrl(data.signedUrl);
+      setLoadingProgress(0);
     } catch (error: any) {
       console.error("Error refreshing video URL:", error);
       toast({
@@ -115,6 +118,9 @@ const Video = () => {
   const handleError = async (error: any) => {
     console.error("Video playback error:", error);
     if (video) {
+      setCanPlay(false);
+      setIsVideoLoading(true);
+      setLoadingProgress(0);
       await refreshVideoUrl(video.file_path);
     }
   };
@@ -125,16 +131,39 @@ const Video = () => {
       const videoElement = playerRef.current.getInternalPlayer();
       if (videoElement) {
         videoElement.setAttribute('preload', 'auto');
+
+        // Track loading progress
+        let lastLoadedPercent = 0;
+        const updateLoadingProgress = () => {
+          if (videoElement.buffered.length > 0) {
+            const loadedFraction = videoElement.buffered.end(0) / videoElement.duration;
+            const loadedPercent = Math.round(loadedFraction * 100);
+            if (loadedPercent !== lastLoadedPercent) {
+              console.log(`Loading progress: ${loadedPercent}%`);
+              setLoadingProgress(loadedPercent);
+              lastLoadedPercent = loadedPercent;
+            }
+            
+            // Consider video ready to play when it's mostly loaded
+            if (loadedPercent >= 95) {
+              setIsVideoLoading(false);
+              setCanPlay(true);
+            }
+          }
+        };
+
+        videoElement.addEventListener('progress', updateLoadingProgress);
         videoElement.addEventListener('loadeddata', () => {
           console.log("Initial video data loaded");
+          updateLoadingProgress();
         });
 
         videoElement.addEventListener('canplaythrough', () => {
           console.log("Video can play through");
-          setIsVideoLoading(false);
-          setCanPlay(true);
+          updateLoadingProgress();
         });
 
+        // Start loading the video
         videoElement.load();
       }
     }
@@ -185,10 +214,13 @@ const Video = () => {
           <div className="lg:col-span-8">
             <div className="rounded-lg overflow-hidden bg-black aspect-video mb-6 relative">
               {isVideoLoading ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-black">
-                  <div className="text-white text-center">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
+                  <div className="text-white text-center mb-4">
                     <div className="mb-2 text-lg font-medium">Loading video...</div>
-                    <div className="text-sm text-gray-300">Please wait while the video loads</div>
+                    <div className="text-sm text-gray-300">{loadingProgress}% loaded</div>
+                  </div>
+                  <div className="w-64">
+                    <Progress value={loadingProgress} className="h-2" />
                   </div>
                 </div>
               ) : (
@@ -251,7 +283,6 @@ const Video = () => {
             </Card>
           </div>
 
-          {/* Right Side - Reserved for AI Features */}
           <div className="lg:col-span-4">
             <Card className="p-4">
               <h2 className="font-semibold mb-2">AI Features</h2>
