@@ -17,10 +17,10 @@ function App() {
         <Navigation />
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/dashboard" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/videos" element={<Videos />} />
           <Route path="/videos/:id" element={<Video />} />
-          <Route path="/my-videos" element={<Index />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
