@@ -55,6 +55,11 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
     setUploading(true);
 
     try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error("User not authenticated");
+
       const fileExt = file.name.split(".").pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
 
@@ -68,23 +73,18 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
 
       if (uploadError) throw uploadError;
 
-      // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("videos")
-        .getPublicUrl(filePath);
-
       // Insert video metadata into the database
       const { error: dbError } = await supabase
         .from("videos")
-        .insert([
-          {
-            title,
-            description,
-            file_path: filePath,
-            duration: "0:00", // This will be updated when the video is loaded
-            views: 0,
-          },
-        ]);
+        .insert({
+          title,
+          description,
+          file_path: filePath,
+          duration: "0:00", // This will be updated when the video is loaded
+          views: 0,
+          size: file.size,
+          user_id: user.id
+        });
 
       if (dbError) throw dbError;
 
