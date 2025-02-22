@@ -50,22 +50,31 @@ const VideoCard = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   const handleDelete = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+
     try {
-      const { error: storageError } = await supabase.storage
-        .from("videos")
-        .remove([filePath]);
-
-      if (storageError) throw storageError;
-
+      // First attempt to delete from database
       const { error: dbError } = await supabase
         .from("videos")
         .delete()
         .eq("id", id);
 
       if (dbError) throw dbError;
+
+      // If database deletion is successful, try to delete from storage
+      // Even if storage deletion fails, we'll consider it a success since the DB record is gone
+      try {
+        await supabase.storage
+          .from("videos")
+          .remove([filePath]);
+      } catch (storageError) {
+        console.error("Storage deletion error (non-critical):", storageError);
+      }
 
       toast({
         title: "Success",
@@ -74,12 +83,14 @@ const VideoCard = ({
 
       onDelete?.();
     } catch (error: any) {
+      console.error("Delete error:", error);
       toast({
         title: "Delete failed",
         description: error.message,
         variant: "destructive",
       });
     } finally {
+      setIsDeleting(false);
       setIsDeleteDialogOpen(false);
     }
   };
@@ -102,7 +113,7 @@ const VideoCard = ({
               </div>
             )}
             <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/75 rounded text-xs text-white">
-              {duration}
+              {duration || "0:00"}
             </div>
           </div>
         </Link>
@@ -164,9 +175,10 @@ const VideoCard = ({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              Delete
+              {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
