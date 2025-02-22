@@ -18,6 +18,7 @@ interface Video {
   duration: string;
   views: number;
   thumbnail?: string;
+  file_path: string;
   created_at: string;
 }
 
@@ -58,6 +59,14 @@ const Index = () => {
   useEffect(() => {
     fetchVideos();
   }, []);
+
+  const handleDelete = () => {
+    fetchVideos();
+  };
+
+  const handleUpdate = () => {
+    fetchVideos();
+  };
 
   const handleUploadComplete = () => {
     fetchVideos();
@@ -118,11 +127,15 @@ const Index = () => {
             {videos.map((video) => (
               <VideoCard
                 key={video.id}
+                id={video.id}
                 title={video.title}
                 duration={video.duration}
                 views={video.views || 0}
                 description={video.description || ""}
                 thumbnail={video.thumbnail}
+                filePath={video.file_path}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
               />
             ))}
           </div>
