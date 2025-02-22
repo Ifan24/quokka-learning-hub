@@ -6,15 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 export interface VideoDetails {
   id: string;
   title: string;
-  description: string | null;
-  views: number | null;
-  duration: string;
   file_path: string;
-  created_at: string;
-  user_id: string;
-  user: {
-    full_name: string | null;
-  } | null;
 }
 
 export const useVideoDetails = (id: string | undefined) => {
@@ -32,13 +24,7 @@ export const useVideoDetails = (id: string | undefined) => {
           .select(`
             id,
             title,
-            description,
-            views,
-            duration,
-            file_path,
-            created_at,
-            user_id,
-            user:profiles(full_name)
+            file_path
           `)
           .eq("id", id)
           .maybeSingle();
@@ -53,14 +39,6 @@ export const useVideoDetails = (id: string | undefined) => {
           return;
         }
 
-        // Increment view count
-        const { error: updateError } = await supabase
-          .from("videos")
-          .update({ views: (videoData.views || 0) + 1 })
-          .eq("id", id);
-
-        if (updateError) throw updateError;
-
         // Get video URL
         const { data: { publicUrl } } = supabase.storage
           .from("videos")
@@ -68,10 +46,7 @@ export const useVideoDetails = (id: string | undefined) => {
 
         setVideo({
           ...videoData,
-          file_path: publicUrl,
-          user: {
-            full_name: videoData.user?.full_name ?? null
-          }
+          file_path: publicUrl
         });
       } catch (error: any) {
         console.error("Video loading error:", error);
