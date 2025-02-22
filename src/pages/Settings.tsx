@@ -69,11 +69,13 @@ const Settings = () => {
 
       if (updateError) throw updateError;
 
-      // Add credits to user's balance
-      const { error: creditError } = await supabase.rpc('add_credits', {
-        user_id_input: user.id,
-        amount_to_add: code.credit_amount
-      });
+      // Add credits to user's balance using direct update
+      const { error: creditError } = await supabase
+        .from("credits")
+        .update({ 
+          amount: (credits?.amount || 0) + code.credit_amount 
+        })
+        .eq("user_id", user.id);
 
       if (creditError) throw creditError;
 

@@ -226,6 +226,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_credits: {
+        Args: {
+          user_id_input: string
+          amount_to_add: number
+        }
+        Returns: undefined
+      }
       get_current_user_profile: {
         Args: Record<PropertyKey, never>
         Returns: {
