@@ -31,7 +31,7 @@ export const useVideoDetails = (id: string | undefined) => {
           .from("videos")
           .select(`
             *,
-            user:profiles!inner(full_name)
+            profiles!videos_user_id_fkey(full_name)
           `)
           .eq("id", id)
           .maybeSingle();
@@ -62,7 +62,9 @@ export const useVideoDetails = (id: string | undefined) => {
         setVideo({
           ...videoData,
           file_path: publicUrl,
-          user: Array.isArray(videoData.user) ? videoData.user[0] : videoData.user
+          user: {
+            full_name: videoData.profiles?.full_name || null
+          }
         });
       } catch (error: any) {
         console.error("Video loading error:", error);
