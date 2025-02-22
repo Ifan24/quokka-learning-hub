@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import ReactPlayer from "react-player";
@@ -32,8 +31,69 @@ const Video = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const playerRef = useRef<ReactPlayer>(null);
   const { toast } = useToast();
-  const [videoUrl, setVideoUrl] = useState<string>("");
+  const [videoUrl, setVideoUrl] = useState<string[]>([]);
   const [canPlay, setCanPlay] = useState(false);
+
+  const getSignedUrls = async (filePath: string): Promise<string[]> => {
+    console.log("Getting signed URLs for video parts...");
+    const urls: string[] = [];
+    let partIndex = 0;
+    let hasMoreParts = true;
+
+    try {
+      // Get the base file
+      const { data: baseData, error: baseError } = await supabase.storage
+        .from("videos")
+        .createSignedUrl(filePath, 7200);
+
+      if (baseError) throw baseError;
+      if (baseData?.signedUrl) {
+        console.log("Got base file URL");
+        urls.push(baseData.signedUrl);
+      }
+
+      // Get all the parts
+      while (hasMoreParts) {
+        const partPath = `${filePath}.part${partIndex}`;
+        const { data, error } = await supabase.storage
+          .from("videos")
+          .createSignedUrl(partPath, 7200);
+
+        if (error) {
+          console.log(`No more parts found after part${partIndex}`);
+          hasMoreParts = false;
+        } else if (data?.signedUrl) {
+          console.log(`Got URL for part${partIndex}`);
+          urls.push(data.signedUrl);
+          partIndex++;
+        }
+      }
+
+      console.log(`Total video parts found: ${urls.length}`);
+      return urls;
+    } catch (error) {
+      console.error("Error getting signed URLs:", error);
+      throw error;
+    }
+  };
+
+  const refreshVideoUrl = async (filePath: string) => {
+    try {
+      const urls = await getSignedUrls(filePath);
+      if (urls.length === 0) {
+        throw new Error("No video parts found");
+      }
+      setVideoUrl(urls);
+      setLoadingProgress(0);
+    } catch (error: any) {
+      console.error("Error refreshing video URL:", error);
+      toast({
+        title: "Error refreshing video",
+        description: "Please refresh the page to continue watching",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchVideo = async () => {
@@ -76,27 +136,6 @@ const Video = () => {
       fetchVideo();
     }
   }, [id, toast]);
-
-  const refreshVideoUrl = async (filePath: string) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from("videos")
-        .createSignedUrl(filePath, 7200); // 2 hours
-
-      if (error) throw error;
-      if (!data?.signedUrl) throw new Error("Could not get video URL");
-
-      setVideoUrl(data.signedUrl);
-      setLoadingProgress(0);
-    } catch (error: any) {
-      console.error("Error refreshing video URL:", error);
-      toast({
-        title: "Error refreshing video",
-        description: "Please refresh the page to continue watching",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleProgress = ({ playedSeconds }: { playedSeconds: number }) => {
     if (canPlay) {
@@ -189,7 +228,6 @@ const Video = () => {
           updateLoadingProgress();
         });
 
-        // Start loading the video
         console.log("Starting video load");
         videoElement.load();
       }
@@ -209,7 +247,7 @@ const Video = () => {
     );
   }
 
-  if (!video || !videoUrl) {
+  if (!video || videoUrl.length === 0) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container px-4 py-8 text-center">
