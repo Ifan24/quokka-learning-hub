@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { VideoInfo } from "@/components/video/VideoInfo";
 import { Transcription } from "@/components/video/Transcription";
+import { VideoChat } from "@/components/video/VideoChat";
 import type { VideoDetails, TranscriptionChunk } from "@/types/video";
 
 const Video = () => {
@@ -191,12 +191,13 @@ const Video = () => {
             <VideoInfo video={video} />
           </div>
 
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-4 space-y-6">
             <Transcription
               video={video}
               isTranscribing={isTranscribing}
               onTranscribe={startTranscription}
             />
+            <VideoChat video={video} />
           </div>
         </div>
       </div>
