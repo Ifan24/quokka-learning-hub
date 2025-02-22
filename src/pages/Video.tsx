@@ -18,9 +18,7 @@ interface VideoDetails {
   duration: string;
   file_path: string;
   created_at: string;
-  user: {
-    full_name: string;
-  } | null;
+  user_id: string;
 }
 
 const Video = () => {
@@ -35,12 +33,7 @@ const Video = () => {
       try {
         const { data, error } = await supabase
           .from("videos")
-          .select(`
-            *,
-            user:user_id (
-              full_name
-            )
-          `)
+          .select(`*`)
           .eq("id", id)
           .single();
 
@@ -167,13 +160,6 @@ const Video = () => {
             </div>
 
             <Card className="p-4">
-              <div className="mb-4">
-                <h2 className="font-semibold mb-1">Uploaded by</h2>
-                <p className="text-sm text-muted-foreground">
-                  {video.user?.full_name || "Unknown user"}
-                </p>
-              </div>
-
               <div>
                 <h2 className="font-semibold mb-1">Description</h2>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">
