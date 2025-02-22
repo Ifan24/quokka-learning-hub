@@ -36,13 +36,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
 
       if (error) throw error;
 
-      // Explicitly cast the questions from Json to QuizQuestion[]
-      const typedQuizzes: Quiz[] = (data || []).map(quiz => ({
-        ...quiz,
-        questions: quiz.questions as QuizQuestion[]
-      }));
-
-      setQuizzes(typedQuizzes);
+      setQuizzes(data as Quiz[]);
     } catch (error: any) {
       console.error("Error loading quizzes:", error);
       toast({
@@ -68,42 +62,6 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
     setIsGenerating(true);
 
     try {
-      // Add existing questions to the prompt to avoid duplicates
-      const existingQuestions = quizzes
-        .flatMap(quiz => quiz.questions)
-        .map(q => q.question)
-        .join("\n- ");
-
-      const prompt = `Generate a quiz based on this video content.
-Title: ${video.title}
-
-Content:
-${video.transcription_text}
-
-${existingQuestions ? `\nPreviously generated questions (avoid duplicates):\n- ${existingQuestions}` : ''}
-
-Please generate 5 NEW and DIFFERENT multiple-choice questions in the following JSON format:
-{
-  "questions": [
-    {
-      "timestamp": <number representing seconds into the video where the answer can be found>,
-      "question": "the question text",
-      "choices": ["choice 1", "choice 2", "choice 3", "choice 4"],
-      "correctAnswer": <index of correct answer (0-3)>,
-      "explanation": "explanation of why this is the correct answer"
-    }
-  ]
-}
-
-Requirements:
-1. Questions should be challenging but fair
-2. All timestamps should correspond to relevant moments in the video
-3. Provide 4 choices for each question
-4. Include clear explanations for the correct answers
-5. Return valid JSON that exactly matches the format above
-6. Do not include any text outside of the JSON structure
-7. IMPORTANT: Generate completely different questions from the ones listed above`;
-
       const { data: quizData, error: generationError } = await supabase.functions
         .invoke("generate-quiz", {
           body: {
@@ -180,7 +138,7 @@ Requirements:
   };
 
   const handleAnswerSelect = (choiceIndex: number) => {
-    if (selectedAnswer !== null) return;
+    if (selectedAnswer !== null) return; // Prevent selecting after answer is revealed
     setSelectedAnswer(choiceIndex);
   };
 
@@ -269,13 +227,35 @@ Requirements:
           </div>
         )}
 
-        <div className="h-16" /> {/* Spacer for fixed buttons */}
+        <div className="flex justify-between mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={previousQuestion}
+            disabled={currentQuizIndex === 0 && currentQuestionIndex === 0}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={nextQuestion}
+            disabled={
+              currentQuizIndex === quizzes.length - 1 &&
+              currentQuestionIndex === quizzes[currentQuizIndex]?.questions.length - 1
+            }
+          >
+            Next
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
       </div>
     );
   };
 
   return (
-    <Card className="p-4 relative">
+    <Card className="p-4">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Quiz</h2>
@@ -310,32 +290,6 @@ Requirements:
           </p>
         )}
       </div>
-
-      {quizzes.length > 0 && (
-        <div className="absolute bottom-4 left-4 right-4 flex justify-between bg-background p-4 border-t">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={previousQuestion}
-            disabled={currentQuizIndex === 0 && currentQuestionIndex === 0}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={nextQuestion}
-            disabled={
-              currentQuizIndex === quizzes.length - 1 &&
-              currentQuestionIndex === quizzes[currentQuizIndex]?.questions.length - 1
-            }
-          >
-            Next
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
-      )}
     </Card>
   );
 };
