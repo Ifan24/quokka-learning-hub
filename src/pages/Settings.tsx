@@ -25,14 +25,28 @@ const Settings = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      // Try to get existing credits
+      const { data: existingCredits, error: existingError } = await supabase
         .from("credits")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
-      setCredits(data);
+      if (existingError) throw existingError;
+
+      // If no credits exist, create initial credits
+      if (!existingCredits) {
+        const { data: newCredits, error: insertError } = await supabase
+          .from("credits")
+          .insert({ user_id: user.id, amount: 100 })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        setCredits(newCredits);
+      } else {
+        setCredits(existingCredits);
+      }
     } catch (error: any) {
       toast({
         title: "Error fetching credits",
