@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -12,12 +11,13 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface VideoUploadDialogProps {
   onUploadComplete?: () => void;
+  children: React.ReactNode;
 }
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_FILE_TYPES = ["video/mp4", "video/quicktime"];
 
-export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) {
+export function VideoUploadDialog({ onUploadComplete, children }: VideoUploadDialogProps) {
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
