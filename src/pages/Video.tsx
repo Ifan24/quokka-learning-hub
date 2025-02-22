@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import ReactPlayer from "react-player";
@@ -8,6 +9,11 @@ import { ChevronLeft, Eye, Calendar, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+
+interface TranscriptionChunk {
+  timestamp: [number, number];
+  text: string;
+}
 
 interface VideoDetails {
   id: string;
@@ -20,10 +26,7 @@ interface VideoDetails {
   user_id: string;
   transcription_status?: string;
   transcription_text?: string;
-  transcription_chunks?: Array<{
-    timestamp: [number, number];
-    text: string;
-  }>;
+  transcription_chunks?: TranscriptionChunk[];
 }
 
 const Video = () => {
@@ -44,7 +47,16 @@ const Video = () => {
           .single();
 
         if (videoError) throw videoError;
-        setVideo(videoData);
+
+        // Parse the transcription chunks if they exist
+        const parsedVideo: VideoDetails = {
+          ...videoData,
+          transcription_chunks: videoData.transcription_chunks 
+            ? (videoData.transcription_chunks as TranscriptionChunk[])
+            : undefined
+        };
+        
+        setVideo(parsedVideo);
 
         const { data: urlData, error: urlError } = await supabase.storage
           .from("videos")
@@ -76,35 +88,6 @@ const Video = () => {
       fetchVideo();
     }
   }, [id, toast]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="container px-4 py-8">
-          <Skeleton className="h-[60vh] w-full mb-4" />
-          <Skeleton className="h-8 w-1/2 mb-2" />
-          <Skeleton className="h-4 w-1/4 mb-4" />
-          <Skeleton className="h-20 w-3/4" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!video || !videoUrl) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="container px-4 py-8 text-center">
-          <p className="text-muted-foreground">Video not found</p>
-          <Link to="/dashboard">
-            <Button variant="outline" className="mt-4">
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
-            </Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   const startTranscription = async () => {
     if (!video) return;
@@ -139,7 +122,14 @@ const Video = () => {
           .single();
 
         if (!refreshError && updatedVideo) {
-          setVideo(updatedVideo);
+          const parsedVideo: VideoDetails = {
+            ...updatedVideo,
+            transcription_chunks: updatedVideo.transcription_chunks 
+              ? (updatedVideo.transcription_chunks as TranscriptionChunk[])
+              : undefined
+          };
+          
+          setVideo(parsedVideo);
           
           if (updatedVideo.transcription_status === 'completed') {
             clearInterval(interval);
@@ -218,6 +208,35 @@ const Video = () => {
 
     return null;
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container px-4 py-8">
+          <Skeleton className="h-[60vh] w-full mb-4" />
+          <Skeleton className="h-8 w-1/2 mb-2" />
+          <Skeleton className="h-4 w-1/4 mb-4" />
+          <Skeleton className="h-20 w-3/4" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!video || !videoUrl) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container px-4 py-8 text-center">
+          <p className="text-muted-foreground">Video not found</p>
+          <Link to="/dashboard">
+            <Button variant="outline" className="mt-4">
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
