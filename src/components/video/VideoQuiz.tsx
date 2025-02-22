@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -192,13 +193,13 @@ export const VideoQuiz = ({
       const { error } = await supabase
         .from("quizzes")
         .delete()
-        .eq("id", quizToDelete.id)
-        .single();
+        .eq("id", quizToDelete.id);
       
       if (error) throw error;
 
       console.log("Quiz deleted successfully");
       
+      // Refresh quizzes from the database to ensure we have the latest state
       await loadQuizzes();
       
       toast({
@@ -212,6 +213,7 @@ export const VideoQuiz = ({
         description: error.message,
         variant: "destructive"
       });
+      // Refresh quizzes to ensure UI is in sync with database
       await loadQuizzes();
     } finally {
       setIsDeleting(false);
