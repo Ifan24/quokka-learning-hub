@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +22,52 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const generateThumbnail = (videoFile: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      video.onloadeddata = () => {
+        // Seek to 1 second (or first frame if video is shorter)
+        video.currentTime = Math.min(1, video.duration);
+      };
+
+      video.onseeked = () => {
+        // Set canvas dimensions to match video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Draw the current frame to canvas
+        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert canvas to blob
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("Failed to generate thumbnail"));
+            }
+          },
+          'image/jpeg',
+          0.7
+        );
+      };
+
+      video.onerror = () => {
+        reject(new Error("Error loading video"));
+      };
+
+      video.src = URL.createObjectURL(videoFile);
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
@@ -46,6 +89,10 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
       return;
     }
 
+    // Set default title from filename (without extension)
+    const fileName = selectedFile.name;
+    const fileTitle = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
+    setTitle(fileTitle);
     setFile(selectedFile);
   };
 
@@ -82,23 +129,40 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
     setUploading(true);
 
     try {
-      // Upload to Supabase Storage
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
+      // Generate thumbnail
+      const thumbnailBlob = await generateThumbnail(file);
+      
+      // Upload video to Supabase Storage
+      const videoExt = file.name.split(".").pop();
+      const videoFileName = `${crypto.randomUUID()}.${videoExt}`;
+      const { error: videoUploadError } = await supabase.storage
         .from("videos")
-        .upload(fileName, file);
+        .upload(videoFileName, file);
 
-      if (uploadError) throw uploadError;
+      if (videoUploadError) throw videoUploadError;
+
+      // Upload thumbnail to Supabase Storage
+      const thumbnailFileName = `${crypto.randomUUID()}.jpg`;
+      const { error: thumbnailUploadError, data: thumbnailData } = await supabase.storage
+        .from("thumbnails")
+        .upload(thumbnailFileName, thumbnailBlob);
+
+      if (thumbnailUploadError) throw thumbnailUploadError;
+
+      // Get thumbnail URL
+      const { data: { publicUrl: thumbnailUrl } } = supabase.storage
+        .from("thumbnails")
+        .getPublicUrl(thumbnailFileName);
 
       // Create video record in the database
       const { error: dbError } = await supabase.from("videos").insert({
         title,
         description: description.trim() || null,
-        file_path: fileName,
+        file_path: videoFileName,
+        thumbnail_url: thumbnailUrl,
         size: file.size,
         duration: "00:00", // This would be updated after processing
-        user_id: user.id, // Add the user_id field
+        user_id: user.id,
       });
 
       if (dbError) throw dbError;

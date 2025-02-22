@@ -41,6 +41,7 @@ export type Database = {
           file_path: string
           id: string
           size: number
+          thumbnail_url: string | null
           title: string
           updated_at: string
           user_id: string
@@ -53,6 +54,7 @@ export type Database = {
           file_path: string
           id?: string
           size: number
+          thumbnail_url?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -65,6 +67,7 @@ export type Database = {
           file_path?: string
           id?: string
           size?: number
+          thumbnail_url?: string | null
           title?: string
           updated_at?: string
           user_id?: string
