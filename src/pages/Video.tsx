@@ -180,6 +180,7 @@ const Video = () => {
                   file: {
                     attributes: {
                       controlsList: "nodownload",
+                      preload: "auto",
                     },
                     forceVideo: true,
                     forceSafariHLS: true,
@@ -188,6 +189,15 @@ const Video = () => {
                       minAutoBitrate: 0,
                       lowLatencyMode: true,
                       backBufferLength: 90,
+                      maxBufferLength: 300,
+                      maxMaxBufferLength: 600,
+                      startLevel: -1,
+                      manifestLoadingTimeOut: 10000,
+                      manifestLoadingMaxRetry: 3,
+                      levelLoadingTimeOut: 10000,
+                      levelLoadingMaxRetry: 3,
+                      fragLoadingTimeOut: 20000,
+                      fragLoadingMaxRetry: 6,
                     },
                   },
                 }}
