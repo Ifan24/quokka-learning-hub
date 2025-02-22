@@ -67,6 +67,18 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
       return;
     }
 
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to upload videos",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setUploading(true);
 
     try {
@@ -86,6 +98,7 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
         file_path: fileName,
         size: file.size,
         duration: "00:00", // This would be updated after processing
+        user_id: user.id, // Add the user_id field
       });
 
       if (dbError) throw dbError;
