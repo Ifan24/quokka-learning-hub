@@ -1,33 +1,15 @@
 
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import ReactPlayer from "react-player";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, Eye, Calendar, Wand2 } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-
-interface TranscriptionChunk {
-  timestamp: [number, number];
-  text: string;
-}
-
-interface VideoDetails {
-  id: string;
-  title: string;
-  description: string;
-  views: number;
-  duration: string;
-  file_path: string;
-  created_at: string;
-  user_id: string;
-  transcription_status?: string;
-  transcription_text?: string;
-  transcription_chunks?: TranscriptionChunk[];
-}
+import { VideoPlayer } from "@/components/video/VideoPlayer";
+import { VideoInfo } from "@/components/video/VideoInfo";
+import { Transcription } from "@/components/video/Transcription";
+import type { VideoDetails, TranscriptionChunk } from "@/types/video";
 
 const Video = () => {
   const { id } = useParams<{ id: string }>();
@@ -48,7 +30,6 @@ const Video = () => {
 
         if (videoError) throw videoError;
 
-        // Parse the transcription chunks if they exist
         const parsedVideo: VideoDetails = {
           ...videoData,
           transcription_chunks: videoData.transcription_chunks 
@@ -163,52 +144,6 @@ const Video = () => {
     }
   };
 
-  const renderTranscription = () => {
-    if (!video) return null;
-
-    if (video.transcription_status === 'completed' && video.transcription_chunks) {
-      return (
-        <div className="mt-4 space-y-2">
-          <h3 className="font-semibold">Transcription</h3>
-          <div className="max-h-[300px] overflow-y-auto space-y-2">
-            {video.transcription_chunks.map((chunk, index) => (
-              <div 
-                key={index}
-                className="p-2 hover:bg-accent rounded-md cursor-pointer"
-                onClick={() => {
-                  const playerElement = document.querySelector('video');
-                  if (playerElement) {
-                    playerElement.currentTime = chunk.timestamp[0];
-                    playerElement.play();
-                  }
-                }}
-              >
-                <div className="text-sm text-muted-foreground">
-                  {Math.floor(chunk.timestamp[0] / 60)}:
-                  {Math.floor(chunk.timestamp[0] % 60).toString().padStart(2, '0')} - 
-                  {Math.floor(chunk.timestamp[1] / 60)}:
-                  {Math.floor(chunk.timestamp[1] % 60).toString().padStart(2, '0')}
-                </div>
-                <div>{chunk.text}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (video.transcription_status === 'processing') {
-      return (
-        <div className="mt-4">
-          <Skeleton className="h-4 w-3/4 mb-2" />
-          <Skeleton className="h-4 w-1/2" />
-        </div>
-      );
-    }
-
-    return null;
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -252,70 +187,16 @@ const Video = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8">
-            <div className="rounded-lg overflow-hidden bg-black aspect-video mb-6">
-              <ReactPlayer
-                url={videoUrl}
-                width="100%"
-                height="100%"
-                controls
-                playing
-                playsinline
-                config={{
-                  file: {
-                    attributes: {
-                      crossOrigin: "anonymous",
-                      controlsList: "nodownload",
-                    },
-                  },
-                }}
-              />
-            </div>
-
-            <h1 className="text-2xl font-bold mb-2">{video.title}</h1>
-            
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-              <div className="flex items-center">
-                <Eye className="w-4 h-4 mr-1" />
-                {video.views?.toLocaleString() || 0} views
-              </div>
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-1" />
-                {format(new Date(video.created_at), "MMM d, yyyy")}
-              </div>
-              <div>Duration: {video.duration}</div>
-            </div>
-
-            <Card className="p-4">
-              <div>
-                <h2 className="font-semibold mb-1">Description</h2>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {video.description || "No description provided"}
-                </p>
-              </div>
-            </Card>
+            <VideoPlayer url={videoUrl} />
+            <VideoInfo video={video} />
           </div>
 
           <div className="lg:col-span-4">
-            <Card className="p-4">
-              <h2 className="font-semibold mb-2">AI Features</h2>
-              <div className="space-y-4">
-                <div>
-                  <Button
-                    onClick={startTranscription}
-                    disabled={isTranscribing || video?.transcription_status === 'processing' || video?.transcription_status === 'completed'}
-                    className="w-full"
-                  >
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    {video?.transcription_status === 'completed' 
-                      ? 'Transcription Complete' 
-                      : video?.transcription_status === 'processing' || isTranscribing
-                      ? 'Transcribing...'
-                      : 'Generate Transcription'}
-                  </Button>
-                  {renderTranscription()}
-                </div>
-              </div>
-            </Card>
+            <Transcription
+              video={video}
+              isTranscribing={isTranscribing}
+              onTranscribe={startTranscription}
+            />
           </div>
         </div>
       </div>
