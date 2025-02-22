@@ -1,0 +1,4 @@
+
+project_id = "bclvquqynectsarfouvp"
+[functions.transcribe-video]
+verify_jwt = false

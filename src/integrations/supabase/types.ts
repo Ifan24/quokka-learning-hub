@@ -35,6 +35,7 @@ export type Database = {
       }
       videos: {
         Row: {
+          audio_file_path: string | null
           created_at: string
           description: string | null
           duration: string
@@ -44,11 +45,15 @@ export type Database = {
           thumbnail_url: string | null
           title: string
           total_parts: number | null
+          transcription_chunks: Json | null
+          transcription_status: string | null
+          transcription_text: string | null
           updated_at: string
           user_id: string
           views: number | null
         }
         Insert: {
+          audio_file_path?: string | null
           created_at?: string
           description?: string | null
           duration: string
@@ -58,11 +63,15 @@ export type Database = {
           thumbnail_url?: string | null
           title: string
           total_parts?: number | null
+          transcription_chunks?: Json | null
+          transcription_status?: string | null
+          transcription_text?: string | null
           updated_at?: string
           user_id: string
           views?: number | null
         }
         Update: {
+          audio_file_path?: string | null
           created_at?: string
           description?: string | null
           duration?: string
@@ -72,6 +81,9 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           total_parts?: number | null
+          transcription_chunks?: Json | null
+          transcription_status?: string | null
+          transcription_text?: string | null
           updated_at?: string
           user_id?: string
           views?: number | null
