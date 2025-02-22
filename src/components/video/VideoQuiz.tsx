@@ -7,11 +7,32 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Quiz, QuizQuestion } from "@/types/quiz";
 import type { VideoDetails } from "@/types/video";
+import type { Json } from "@/integrations/supabase/types";
 
 interface VideoQuizProps {
   video: VideoDetails;
   onSeek: (time: number) => void;
 }
+
+// Type guard to validate quiz question format
+const isValidQuizQuestion = (q: Json): q is QuizQuestion => {
+  if (!q || typeof q !== 'object') return false;
+  return (
+    typeof (q as any).timestamp === 'number' &&
+    typeof (q as any).question === 'string' &&
+    Array.isArray((q as any).choices) &&
+    (q as any).choices.length === 4 &&
+    typeof (q as any).correctAnswer === 'number' &&
+    (q as any).correctAnswer >= 0 &&
+    (q as any).correctAnswer <= 3 &&
+    typeof (q as any).explanation === 'string'
+  );
+};
+
+// Type guard to validate array of quiz questions
+const isValidQuizQuestionArray = (questions: Json): questions is QuizQuestion[] => {
+  return Array.isArray(questions) && questions.every(isValidQuizQuestion);
+};
 
 export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -36,7 +57,23 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
 
       if (error) throw error;
 
-      setQuizzes(data as Quiz[]);
+      // Transform and validate the data
+      const validQuizzes: Quiz[] = [];
+      
+      for (const rawQuiz of data || []) {
+        if (isValidQuizQuestionArray(rawQuiz.questions)) {
+          validQuizzes.push({
+            id: rawQuiz.id,
+            video_id: rawQuiz.video_id,
+            questions: rawQuiz.questions,
+            created_at: rawQuiz.created_at
+          });
+        } else {
+          console.warn("Invalid quiz data found:", rawQuiz);
+        }
+      }
+
+      setQuizzes(validQuizzes);
     } catch (error: any) {
       console.error("Error loading quizzes:", error);
       toast({
@@ -226,30 +263,6 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
             <p className="text-muted-foreground">{question.explanation}</p>
           </div>
         )}
-
-        <div className="flex justify-between mt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={previousQuestion}
-            disabled={currentQuizIndex === 0 && currentQuestionIndex === 0}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={nextQuestion}
-            disabled={
-              currentQuizIndex === quizzes.length - 1 &&
-              currentQuestionIndex === quizzes[currentQuizIndex]?.questions.length - 1
-            }
-          >
-            Next
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
       </div>
     );
   };
@@ -290,6 +303,32 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
           </p>
         )}
       </div>
+
+      {quizzes.length > 0 && (
+        <div className="flex justify-between mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={previousQuestion}
+            disabled={currentQuizIndex === 0 && currentQuestionIndex === 0}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={nextQuestion}
+            disabled={
+              currentQuizIndex === quizzes.length - 1 &&
+              currentQuestionIndex === quizzes[currentQuizIndex]?.questions.length - 1
+            }
+          >
+            Next
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+      )}
     </Card>
   );
 };
