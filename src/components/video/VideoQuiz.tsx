@@ -47,13 +47,14 @@ export const VideoQuiz = ({
 
   const loadQuizzes = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from("quizzes").select("*").eq("video_id", video.id).order("created_at", {
-        ascending: false
-      });
+      const { data, error } = await supabase
+        .from("quizzes")
+        .select("*")
+        .eq("video_id", video.id)
+        .order("created_at", { ascending: false });
+
       if (error) throw error;
+
       const validQuizzes: Quiz[] = [];
       for (const rawQuiz of data || []) {
         if (Array.isArray(rawQuiz.questions) && rawQuiz.questions.every(validateQuizQuestion)) {
@@ -67,7 +68,11 @@ export const VideoQuiz = ({
           console.warn("Invalid quiz data found:", rawQuiz);
         }
       }
+      console.log("Loaded quizzes:", validQuizzes);
       setQuizzes(validQuizzes);
+      setCurrentQuizIndex(0);
+      setCurrentQuestionIndex(0);
+      setSelectedAnswer(null);
     } catch (error: any) {
       console.error("Error loading quizzes:", error);
       toast({
@@ -180,23 +185,21 @@ export const VideoQuiz = ({
     if (!quizzes.length || isDeleting) return;
     
     const quizToDelete = quizzes[currentQuizIndex];
+    console.log("Attempting to delete quiz:", quizToDelete);
     setIsDeleting(true);
     
     try {
       const { error } = await supabase
         .from("quizzes")
         .delete()
-        .eq("id", quizToDelete.id);
+        .eq("id", quizToDelete.id)
+        .single();
       
       if (error) throw error;
 
-      setQuizzes(prev => prev.filter(quiz => quiz.id !== quizToDelete.id));
+      console.log("Quiz deleted successfully");
       
-      if (currentQuizIndex >= quizzes.length - 1) {
-        setCurrentQuizIndex(Math.max(0, quizzes.length - 2));
-      }
-      setCurrentQuestionIndex(0);
-      setSelectedAnswer(null);
+      await loadQuizzes();
       
       toast({
         title: "Quiz Deleted",
@@ -209,6 +212,7 @@ export const VideoQuiz = ({
         description: error.message,
         variant: "destructive"
       });
+      await loadQuizzes();
     } finally {
       setIsDeleting(false);
     }
