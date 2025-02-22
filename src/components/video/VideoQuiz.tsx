@@ -1,11 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Wand2, Loader2, Play, ArrowLeft, ArrowRight, Check, X, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/components/AuthProvider";
 import type { Quiz, QuizQuestion } from "@/types/quiz";
 import type { VideoDetails } from "@/types/video";
 import type { Json } from "@/integrations/supabase/types";
@@ -42,9 +40,6 @@ export const VideoQuiz = ({
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
-
-  const isOwner = user?.id === video.user_id;
 
   useEffect(() => {
     loadQuizzes();
@@ -189,7 +184,7 @@ export const VideoQuiz = ({
   };
 
   const deleteQuiz = async () => {
-    if (!quizzes.length || isDeleting || !isOwner) return;
+    if (!quizzes.length || isDeleting) return;
     
     const quizToDelete = quizzes[currentQuizIndex];
     console.log("Attempting to delete quiz:", quizToDelete);
@@ -263,21 +258,19 @@ export const VideoQuiz = ({
               >
                 <ChevronDown className="h-4 w-4" />
               </Button>
-              {isOwner && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={deleteQuiz}
-                  disabled={isDeleting}
-                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                >
-                  {isDeleting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={deleteQuiz}
+                disabled={isDeleting}
+                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </Button>
             </div>
             <div className="text-sm text-muted-foreground whitespace-nowrap">
               Question {currentQuestionIndex + 1} of {totalQuestions}
@@ -344,24 +337,22 @@ export const VideoQuiz = ({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Quiz</h2>
-          {isOwner && (
-            <Button
-              onClick={generateQuiz}
-              disabled={isGenerating || !video.transcription_chunks}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="w-4 h-4 mr-2" />
-                  Generate Quiz
-                </>
-              )}
-            </Button>
-          )}
+          <Button
+            onClick={generateQuiz}
+            disabled={isGenerating || !video.transcription_chunks}
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="w-4 h-4 mr-2" />
+                Generate Quiz
+              </>
+            )}
+          </Button>
         </div>
 
         {isLoading ? (
@@ -373,10 +364,7 @@ export const VideoQuiz = ({
           renderCurrentQuestion()
         ) : (
           <p className="text-center text-muted-foreground text-sm">
-            {isOwner 
-              ? "Generate a quiz to test your knowledge of the video content"
-              : "No quizzes available for this video yet"
-            }
+            Generate a quiz to test your knowledge of the video content
           </p>
         )}
       </div>
