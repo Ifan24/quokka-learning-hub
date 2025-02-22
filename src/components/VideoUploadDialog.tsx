@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +14,8 @@ interface VideoUploadDialogProps {
   onUploadComplete?: () => void;
 }
 
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
-const ALLOWED_FILE_TYPES = ["video/mp4", "video/avi", "video/quicktime"];
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const ALLOWED_FILE_TYPES = ["video/mp4", "video/quicktime"];
 
 export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) {
   const [open, setOpen] = useState(false);
@@ -33,19 +33,14 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
       const ctx = canvas.getContext('2d');
 
       video.onloadeddata = () => {
-        // Seek to 1 second (or first frame if video is shorter)
         video.currentTime = Math.min(1, video.duration);
       };
 
       video.onseeked = () => {
-        // Set canvas dimensions to match video
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        
-        // Draw the current frame to canvas
         ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Convert canvas to blob
         canvas.toBlob(
           (blob) => {
             if (blob) {
@@ -95,7 +90,7 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
     if (!ALLOWED_FILE_TYPES.includes(selectedFile.type)) {
       toast({
         title: "Invalid file type",
-        description: "Please upload MP4, AVI, or MOV files only.",
+        description: "Please upload MP4 or MOV files only.",
         variant: "destructive",
       });
       return;
@@ -104,13 +99,12 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
     if (selectedFile.size > MAX_FILE_SIZE) {
       toast({
         title: "File too large",
-        description: "Maximum file size is 500MB",
+        description: "Maximum file size is 50MB",
         variant: "destructive",
       });
       return;
     }
 
-    // Set default title from filename (without extension)
     const fileName = selectedFile.name;
     const fileTitle = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
     setTitle(fileTitle);
@@ -154,43 +148,28 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
       const duration = await getVideoDuration(file);
       
       // Generate thumbnail
-      setUploadProgress(10);
+      setUploadProgress(20);
       const thumbnailBlob = await generateThumbnail(file);
       
-      // Upload video to Supabase Storage
+      // Upload video as a single file
       const videoExt = file.name.split(".").pop();
       const videoFileName = `${crypto.randomUUID()}.${videoExt}`;
-
-      // Custom upload with progress
-      const videoBuffer = await file.arrayBuffer();
-      const videoUint8Array = new Uint8Array(videoBuffer);
-      const chunkSize = 1024 * 1024; // 1MB chunks
-      const totalChunks = Math.ceil(videoUint8Array.length / chunkSize);
       
-      setUploadProgress(20); // Starting video upload
+      setUploadProgress(30);
 
-      for (let i = 0; i < totalChunks; i++) {
-        const start = i * chunkSize;
-        const end = Math.min(start + chunkSize, videoUint8Array.length);
-        const chunk = videoUint8Array.slice(start, end);
-        
-        const { error: uploadError } = await supabase.storage
-          .from("videos")
-          .upload(
-            i === 0 ? videoFileName : `${videoFileName}.part${i}`,
-            chunk,
-            { upsert: true }
-          );
+      // Single file upload
+      const { error: uploadError } = await supabase.storage
+        .from("videos")
+        .upload(videoFileName, file, {
+          cacheControl: "3600",
+          upsert: false
+        });
 
-        if (uploadError) throw uploadError;
-        
-        // Update progress (20% to 70% for video upload)
-        const progressPercent = 20 + Math.round((i + 1) / totalChunks * 50);
-        setUploadProgress(progressPercent);
-      }
+      if (uploadError) throw uploadError;
+      
+      setUploadProgress(70);
 
       // Upload thumbnail
-      setUploadProgress(75);
       const thumbnailFileName = `${crypto.randomUUID()}.jpg`;
       const { error: thumbnailUploadError } = await supabase.storage
         .from("thumbnails")
@@ -215,6 +194,7 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
         size: file.size,
         duration,
         user_id: user.id,
+        total_parts: 1, // Always 1 since we're not splitting files
       });
 
       if (dbError) throw dbError;
@@ -283,11 +263,11 @@ export function VideoUploadDialog({ onUploadComplete }: VideoUploadDialogProps) 
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="video">Video File</Label>
+            <Label htmlFor="video">Video File (Max 50MB)</Label>
             <Input
               id="video"
               type="file"
-              accept=".mp4,.avi,.mov,video/mp4,video/avi,video/quicktime"
+              accept=".mp4,.mov,video/mp4,video/quicktime"
               onChange={handleFileChange}
               className="cursor-pointer"
             />
