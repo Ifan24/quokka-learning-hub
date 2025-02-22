@@ -25,11 +25,13 @@ const Video = () => {
   const { id } = useParams<{ id: string }>();
   const [video, setVideo] = useState<VideoDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isVideoLoading, setIsVideoLoading] = useState(true);
   const [playedSeconds, setPlayedSeconds] = useState(0);
   const [isBuffering, setIsBuffering] = useState(false);
   const playerRef = useRef<ReactPlayer>(null);
   const { toast } = useToast();
   const [videoUrl, setVideoUrl] = useState<string>("");
+  const [canPlay, setCanPlay] = useState(false);
 
   useEffect(() => {
     const fetchVideo = async () => {
@@ -42,7 +44,6 @@ const Video = () => {
 
         if (error) throw error;
 
-        // Increment view count
         const { error: updateError } = await supabase
           .from("videos")
           .update({ views: (data.views || 0) + 1 })
@@ -53,7 +54,6 @@ const Video = () => {
         setVideo(data);
         await refreshVideoUrl(data.file_path);
 
-        // Load last watched position
         const lastPosition = localStorage.getItem(`video-progress-${id}`);
         if (lastPosition) {
           setPlayedSeconds(parseFloat(lastPosition));
@@ -79,7 +79,7 @@ const Video = () => {
     try {
       const { data, error } = await supabase.storage
         .from("videos")
-        .createSignedUrl(filePath, 3600);
+        .createSignedUrl(filePath, 7200); // Increased to 2 hours
 
       if (error) throw error;
       if (!data?.signedUrl) throw new Error("Could not get video URL");
@@ -96,8 +96,10 @@ const Video = () => {
   };
 
   const handleProgress = ({ playedSeconds }: { playedSeconds: number }) => {
-    setPlayedSeconds(playedSeconds);
-    localStorage.setItem(`video-progress-${id}`, playedSeconds.toString());
+    if (canPlay) {
+      setPlayedSeconds(playedSeconds);
+      localStorage.setItem(`video-progress-${id}`, playedSeconds.toString());
+    }
   };
 
   const handleBuffer = () => {
@@ -113,7 +115,6 @@ const Video = () => {
   const handleError = async (error: any) => {
     console.error("Video playback error:", error);
     if (video) {
-      // Try to refresh the URL on error
       await refreshVideoUrl(video.file_path);
     }
   };
@@ -123,7 +124,22 @@ const Video = () => {
     if (playerRef.current) {
       const videoElement = playerRef.current.getInternalPlayer();
       if (videoElement) {
+        // Force preload of the entire video
         videoElement.setAttribute('preload', 'auto');
+        
+        // Set up event listeners for loading
+        videoElement.addEventListener('loadeddata', () => {
+          console.log("Initial video data loaded");
+        });
+
+        videoElement.addEventListener('canplaythrough', () => {
+          console.log("Video can play through");
+          setIsVideoLoading(false);
+          setCanPlay(true);
+        });
+
+        // Start loading the video
+        videoElement.load();
       }
     }
   };
@@ -179,7 +195,7 @@ const Video = () => {
                 width="100%"
                 height="100%"
                 controls
-                playing
+                playing={canPlay}
                 playsinline
                 onProgress={handleProgress}
                 onBuffer={handleBuffer}
@@ -198,9 +214,12 @@ const Video = () => {
                 }}
                 played={playedSeconds}
               />
-              {isBuffering && (
+              {(isBuffering || isVideoLoading) && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                  <div className="text-white">Loading...</div>
+                  <div className="text-white text-center">
+                    <div className="mb-2">Loading video...</div>
+                    <div className="text-sm">Please wait while the entire video loads</div>
+                  </div>
                 </div>
               )}
             </div>
