@@ -70,21 +70,41 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
       const fileExt = file.name.split(".").pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
 
-      // Upload the complete file to Supabase Storage with progress tracking
+      // Use XMLHttpRequest to track upload progress
+      const xhr = new XMLHttpRequest();
+      const uploadPromise = new Promise<void>((resolve, reject) => {
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentage = (event.loaded / event.total) * 100;
+            setUploadProgress(percentage);
+          }
+        });
+
+        xhr.addEventListener('error', () => {
+          reject(new Error('Upload failed'));
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        });
+      });
+
+      // Upload the file to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from("videos")
         .upload(filePath, file, {
           cacheControl: "3600",
           upsert: false,
-          onUploadProgress: (progress) => {
-            if (progress.totalBytes > 0) {
-              const percent = (progress.bytesUploaded / progress.totalBytes) * 100;
-              setUploadProgress(percent);
-            }
-          },
         });
 
       if (uploadError) throw uploadError;
+
+      // Wait for the progress tracking to complete
+      await uploadPromise;
 
       // Get the public URL for verification
       const { data: { publicUrl } } = supabase.storage
