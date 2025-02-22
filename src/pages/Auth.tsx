@@ -11,6 +11,7 @@ import Navigation from "@/components/Navigation";
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -22,7 +23,17 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      if (isSignUp) {
+      if (isForgotPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth?reset=true`,
+        });
+        if (error) throw error;
+        toast({
+          title: "Reset email sent",
+          description: "Check your email for the password reset link",
+        });
+        setIsForgotPassword(false);
+      } else if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -56,6 +67,11 @@ const Auth = () => {
     }
   };
 
+  const toggleMode = () => {
+    setIsSignUp(!isSignUp);
+    setIsForgotPassword(false);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -63,12 +79,16 @@ const Auth = () => {
         <Card>
           <CardHeader>
             <h1 className="text-2xl font-bold text-center">
-              {isSignUp ? "Create an Account" : "Welcome Back"}
+              {isForgotPassword
+                ? "Reset Password"
+                : isSignUp
+                ? "Create an Account"
+                : "Welcome Back"}
             </h1>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAuth} className="space-y-4">
-              {isSignUp && (
+              {isSignUp && !isForgotPassword && (
                 <div className="space-y-2">
                   <label
                     htmlFor="fullName"
@@ -100,39 +120,72 @@ const Auth = () => {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="password"
-                  className="text-sm font-medium text-secondary"
-                >
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </div>
+              {!isForgotPassword && (
+                <div className="space-y-2">
+                  <label
+                    htmlFor="password"
+                    className="text-sm font-medium text-secondary"
+                  >
+                    Password
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading
                   ? "Loading..."
+                  : isForgotPassword
+                  ? "Send Reset Link"
                   : isSignUp
                   ? "Create Account"
                   : "Sign In"}
               </Button>
-              <p className="text-center text-sm text-muted-foreground">
-                {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(!isSignUp)}
-                  className="text-primary hover:underline"
-                >
-                  {isSignUp ? "Sign In" : "Sign Up"}
-                </button>
-              </p>
+              
+              {!isForgotPassword && (
+                <p className="text-center text-sm text-muted-foreground">
+                  {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
+                  <button
+                    type="button"
+                    onClick={toggleMode}
+                    className="text-primary hover:underline"
+                  >
+                    {isSignUp ? "Sign In" : "Sign Up"}
+                  </button>
+                </p>
+              )}
+              
+              {!isSignUp && !isForgotPassword && (
+                <p className="text-center text-sm text-muted-foreground">
+                  Forgot your password?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotPassword(true)}
+                    className="text-primary hover:underline"
+                  >
+                    Reset it here
+                  </button>
+                </p>
+              )}
+              
+              {isForgotPassword && (
+                <p className="text-center text-sm text-muted-foreground">
+                  Remember your password?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotPassword(false)}
+                    className="text-primary hover:underline"
+                  >
+                    Sign in
+                  </button>
+                </p>
+              )}
             </form>
           </CardContent>
         </Card>
