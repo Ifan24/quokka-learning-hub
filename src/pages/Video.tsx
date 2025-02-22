@@ -124,10 +124,7 @@ const Video = () => {
     if (playerRef.current) {
       const videoElement = playerRef.current.getInternalPlayer();
       if (videoElement) {
-        // Force preload of the entire video
         videoElement.setAttribute('preload', 'auto');
-        
-        // Set up event listeners for loading
         videoElement.addEventListener('loadeddata', () => {
           console.log("Initial video data loaded");
         });
@@ -138,7 +135,6 @@ const Video = () => {
           setCanPlay(true);
         });
 
-        // Start loading the video
         videoElement.load();
       }
     }
@@ -186,40 +182,47 @@ const Video = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Video Player and Details */}
           <div className="lg:col-span-8">
             <div className="rounded-lg overflow-hidden bg-black aspect-video mb-6 relative">
-              <ReactPlayer
-                ref={playerRef}
-                url={videoUrl}
-                width="100%"
-                height="100%"
-                controls
-                playing={canPlay}
-                playsinline
-                onProgress={handleProgress}
-                onBuffer={handleBuffer}
-                onBufferEnd={handleBufferEnd}
-                onError={handleError}
-                onReady={handleReady}
-                progressInterval={1000}
-                config={{
-                  file: {
-                    attributes: {
-                      preload: "auto",
-                      controlsList: "nodownload",
-                    },
-                    forceVideo: true,
-                  },
-                }}
-                played={playedSeconds}
-              />
-              {(isBuffering || isVideoLoading) && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+              {isVideoLoading ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black">
                   <div className="text-white text-center">
-                    <div className="mb-2">Loading video...</div>
-                    <div className="text-sm">Please wait while the entire video loads</div>
+                    <div className="mb-2 text-lg font-medium">Loading video...</div>
+                    <div className="text-sm text-gray-300">Please wait while the video loads</div>
                   </div>
+                </div>
+              ) : (
+                <div className={`transition-opacity duration-300 ${canPlay ? 'opacity-100' : 'opacity-0'}`}>
+                  <ReactPlayer
+                    ref={playerRef}
+                    url={videoUrl}
+                    width="100%"
+                    height="100%"
+                    controls
+                    playing={canPlay}
+                    playsinline
+                    onProgress={handleProgress}
+                    onBuffer={handleBuffer}
+                    onBufferEnd={handleBufferEnd}
+                    onError={handleError}
+                    onReady={handleReady}
+                    progressInterval={1000}
+                    config={{
+                      file: {
+                        attributes: {
+                          preload: "auto",
+                          controlsList: "nodownload",
+                        },
+                        forceVideo: true,
+                      },
+                    }}
+                    played={playedSeconds}
+                  />
+                </div>
+              )}
+              {isBuffering && canPlay && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                  <div className="text-white">Buffering...</div>
                 </div>
               )}
             </div>
