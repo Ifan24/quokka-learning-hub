@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ interface VideoUploadDialogProps {
 }
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const ALLOWED_FILE_TYPES = ["video/mp4", "video/quicktime"];
+const ALLOWED_FILE_TYPES = ["video/mp4", "video/quicktime", "audio/mpeg"];
 
 export function VideoUploadDialog({ onUploadComplete, children }: VideoUploadDialogProps) {
   const [open, setOpen] = useState(false);
@@ -79,7 +80,7 @@ export function VideoUploadDialog({ onUploadComplete, children }: VideoUploadDia
     if (!ALLOWED_FILE_TYPES.includes(selectedFile.type)) {
       toast({
         title: "Invalid file type",
-        description: "Please upload MP4 or MOV files only.",
+        description: "Please upload MP4, MOV, or MP3 files only.",
         variant: "destructive"
       });
       return;
@@ -224,8 +225,14 @@ export function VideoUploadDialog({ onUploadComplete, children }: VideoUploadDia
             <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Enter video description (optional)" rows={3} />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="video">Video File (Max 50MB)</Label>
-            <Input id="video" type="file" accept=".mp4,.mov,video/mp4,video/quicktime" onChange={handleFileChange} className="cursor-pointer" />
+            <Label htmlFor="video">Media File (Max 50MB)</Label>
+            <Input 
+              id="video" 
+              type="file" 
+              accept=".mp4,.mov,.mp3,video/mp4,video/quicktime,audio/mpeg" 
+              onChange={handleFileChange} 
+              className="cursor-pointer" 
+            />
             {file && <p className="text-sm text-muted-foreground">
                 {file.name} ({formatFileSize(file.size)})
               </p>}
