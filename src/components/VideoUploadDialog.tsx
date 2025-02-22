@@ -21,6 +21,10 @@ interface VideoUploadDialogProps {
   onUploadComplete?: () => void;
 }
 
+interface UploadResult {
+  error: Error | null;
+}
+
 export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) => {
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -71,7 +75,7 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
 
       // Upload the file using XHR to track progress
-      const { error: uploadError } = await new Promise((resolve, reject) => {
+      const { error: uploadError } = await new Promise<UploadResult>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
 
         xhr.upload.addEventListener('progress', (event) => {
