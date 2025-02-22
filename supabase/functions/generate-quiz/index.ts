@@ -46,11 +46,11 @@ serve(async (req) => {
       ?.flatMap(quiz => (quiz.questions as any[])?.map(q => q.question) || [])
       .filter(Boolean);
 
-    // Format transcription chunks for better context
+    // Format transcription chunks using seconds instead of min:sec
     const formattedChunks = transcription_chunks.map((chunk: any) => {
       const startTime = chunk.timestamp[0];
       const endTime = chunk.timestamp[1];
-      return `[${Math.floor(startTime/60)}:${Math.floor(startTime%60).toString().padStart(2, '0')} - ${Math.floor(endTime/60)}:${Math.floor(endTime%60).toString().padStart(2, '0')}] ${chunk.text}`;
+      return `[${startTime} - ${endTime} seconds] ${chunk.text}`;
     }).join("\n");
 
     // Get video duration range
@@ -63,10 +63,10 @@ serve(async (req) => {
 
     console.log("Generating quiz for video:", videoId);
 
-    const prompt = `Generate a quiz based on this video content.
+    const prompt = `Generate a quiz based on this video content. Each chunk of text is provided with its exact timestamp range in seconds.
 Title: ${title}
 
-Content (with timestamps):
+Content (with timestamps in seconds):
 ${formattedChunks}
 
 Valid timestamp range: ${minTimestamp} to ${maxTimestamp} seconds.

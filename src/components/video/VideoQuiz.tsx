@@ -14,8 +14,8 @@ interface VideoQuizProps {
   onSeek: (time: number) => void;
 }
 
-// Type guard to validate quiz question format
-const isValidQuizQuestion = (q: Json): q is QuizQuestion => {
+// Helper function to validate quiz question structure
+const validateQuizQuestion = (q: Json): boolean => {
   if (!q || typeof q !== 'object') return false;
   return (
     typeof (q as any).timestamp === 'number' &&
@@ -27,9 +27,15 @@ const isValidQuizQuestion = (q: Json): q is QuizQuestion => {
   );
 };
 
-// Type guard to validate array of quiz questions
-const isValidQuizQuestionArray = (questions: Json): questions is QuizQuestion[] => {
-  return Array.isArray(questions) && questions.every(isValidQuizQuestion);
+// Helper function to convert validated Json to QuizQuestion
+const convertToQuizQuestion = (q: Json): QuizQuestion => {
+  return {
+    timestamp: (q as any).timestamp,
+    question: (q as any).question,
+    choices: (q as any).choices,
+    correctAnswer: (q as any).correctAnswer,
+    explanation: (q as any).explanation,
+  };
 };
 
 export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
@@ -58,11 +64,11 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
       const validQuizzes: Quiz[] = [];
       
       for (const rawQuiz of data || []) {
-        if (isValidQuizQuestionArray(rawQuiz.questions)) {
+        if (Array.isArray(rawQuiz.questions) && rawQuiz.questions.every(validateQuizQuestion)) {
           validQuizzes.push({
             id: rawQuiz.id,
             video_id: rawQuiz.video_id,
-            questions: rawQuiz.questions,
+            questions: rawQuiz.questions.map(convertToQuizQuestion),
             created_at: rawQuiz.created_at
           });
         } else {
