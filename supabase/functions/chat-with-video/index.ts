@@ -9,7 +9,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -21,18 +20,10 @@ serve(async (req) => {
       throw new Error('Missing required parameters')
     }
 
-    console.log('Request received:', { question });
-
     // Initialize FAL client
-    const apiKey = Deno.env.get('FAL_API_KEY');
-    if (!apiKey) {
-      throw new Error('FAL_API_KEY is not configured');
-    }
-
-    // Configure FAL client with API key
     fal.config({
-      credentials: apiKey,
-    });
+      credentials: Deno.env.get('FAL_API_KEY'),
+    })
 
     const prompt = `Based on the following video transcription, answer the question.
     
@@ -43,68 +34,35 @@ Question: ${question}
 
 Please provide a clear and concise answer based solely on the information provided in the transcription.`
 
-    console.log('Starting FAL AI request...');
-
-    // Create a TransformStream for streaming the response
-    const stream = new TransformStream()
-    const writer = stream.writable.getWriter()
-
-    // Start the streaming response
-    const response = new Response(stream.readable, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
+    console.log('Sending request to FAL AI...')
+    const result = await fal.subscribe("fal-ai/any-llm", {
+      input: {
+        model: "anthropic/claude-3.5-sonnet",
+        prompt: prompt,
+        reasoning: false
       },
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS") {
+          update.logs.map((log) => log.message).forEach(console.log);
+        }
+      }
     })
 
-    // Process the stream in the background
-    const processStream = async () => {
-      try {
-        console.log('Making FAL AI request...');
-        
-        const falStream = await fal.stream('fal-ai/any-llm', {
-          input: {
-            model: 'anthropic/claude-3.5-sonnet',
-            prompt: prompt,
-          }
-        });
+    console.log('Received response from FAL AI:', result)
 
-        console.log('Request initialized, processing stream...');
-        
-        for await (const event of falStream) {
-          console.log('Received event:', event);
-          if (event.output) {
-            await writer.write(
-              new TextEncoder().encode(
-                JSON.stringify({ delta: event.output }) + '\n'
-              )
-            );
-          }
+    return new Response(
+      JSON.stringify({ success: true, output: result.data.output }),
+      { 
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json',
         }
-
-        // Get the final result
-        const result = await falStream.done();
-        console.log('Stream completed successfully:', result);
-
-      } catch (error) {
-        console.error('Streaming error:', error);
-        await writer.write(
-          new TextEncoder().encode(
-            JSON.stringify({ error: error.message }) + '\n'
-          )
-        );
-      } finally {
-        await writer.close();
       }
-    }
-
-    // Start processing the stream without awaiting
-    processStream();
-
-    return response;
+    )
 
   } catch (error) {
-    console.error('Chat error:', error);
+    console.error('Chat error:', error)
     return new Response(
       JSON.stringify({
         error: error.message

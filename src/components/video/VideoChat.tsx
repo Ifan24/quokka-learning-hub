@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,6 @@ export const VideoChat = ({ video }: VideoChatProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const streamingMessageRef = useRef<ChatMessage | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,65 +27,32 @@ export const VideoChat = ({ video }: VideoChatProps) => {
 
     const userMessage = { role: "user" as const, content: input };
     setMessages(prev => [...prev, userMessage]);
-
-    // Initialize streaming message
-    streamingMessageRef.current = { role: "assistant", content: "" };
-    setMessages(prev => [...prev, streamingMessageRef.current!]);
-
     setInput("");
     setIsLoading(true);
 
     try {
-      console.log("Sending request to edge function...");
-      const response = await fetch(`https://bclvquqynectsarfouvp.functions.supabase.co/chat-with-video`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjbHZxdXF5bmVjdHNhcmZvdXZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAyMDY4MzgsImV4cCI6MjA1NTc4MjgzOH0.4QaBN2__cUbSCYteCQFJ4rgkIouhXck2Rp28Bz8lsZA`,
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke("chat-with-video", {
+        body: {
           question: input,
           transcription: video.transcription_text,
-        }),
+        },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Server responded with ${response.status}: ${JSON.stringify(errorData)}`);
-      }
+      if (error) throw error;
 
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        console.log("Received chunk:", chunk);
-
-        try {
-          const data = JSON.parse(chunk);
-          if (data.error) {
-            throw new Error(data.error);
-          }
-          if (data.delta) {
-            streamingMessageRef.current!.content += data.delta;
-            setMessages(prev => [...prev.slice(0, -1), { ...streamingMessageRef.current! }]);
-          }
-        } catch (parseError) {
-          console.error("Error parsing chunk:", parseError);
-          throw new Error("Failed to parse server response");
-        }
+      if (data?.output) {
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: data.output,
+        }]);
       }
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages(prev => [...prev.slice(0, -1), {
+      setMessages(prev => [...prev, {
         role: "assistant",
-        content: `Error: ${error.message}`,
+        content: "Sorry, I encountered an error while processing your question. Please try again.",
       }]);
     } finally {
-      streamingMessageRef.current = null;
       setIsLoading(false);
     }
   };
