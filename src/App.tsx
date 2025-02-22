@@ -12,16 +12,14 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="min-h-screen flex flex-col">
-          <Navigation />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/videos/:id" element={<Video />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </div>
+        <Navigation />
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/dashboard" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/videos/:id" element={<Video />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
         <Toaster />
       </AuthProvider>
     </Router>
