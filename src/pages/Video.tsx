@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import ReactPlayer from "react-player";
 import { Card } from "@/components/ui/card";
@@ -27,6 +27,7 @@ const Video = () => {
   const [loading, setLoading] = useState(true);
   const [playedSeconds, setPlayedSeconds] = useState(0);
   const [isBuffering, setIsBuffering] = useState(false);
+  const playerRef = useRef<ReactPlayer>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,14 +49,16 @@ const Video = () => {
 
         if (updateError) throw updateError;
 
-        // Get signed URL for the full video without transformations
-        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        // Get the public URL instead of a signed URL
+        const publicUrl = supabase.storage
           .from("videos")
-          .createSignedUrl(data.file_path, 3600);
+          .getPublicUrl(data.file_path);
 
-        if (signedUrlError) throw signedUrlError;
+        if (!publicUrl.data?.publicUrl) {
+          throw new Error("Could not get video URL");
+        }
 
-        setVideo({ ...data, file_path: signedUrlData.signedUrl });
+        setVideo({ ...data, file_path: publicUrl.data.publicUrl });
 
         // Load last watched position
         const lastPosition = localStorage.getItem(`video-progress-${id}`);
@@ -63,6 +66,7 @@ const Video = () => {
           setPlayedSeconds(parseFloat(lastPosition));
         }
       } catch (error: any) {
+        console.error("Error loading video:", error);
         toast({
           title: "Error loading video",
           description: error.message,
@@ -84,38 +88,27 @@ const Video = () => {
   };
 
   const handleBuffer = () => {
+    console.log("Video buffering...");
     setIsBuffering(true);
   };
 
   const handleBufferEnd = () => {
+    console.log("Video buffering ended");
     setIsBuffering(false);
   };
 
   const handleError = (error: any) => {
     console.error("Video playback error:", error);
-    // If the error is due to expired URL, refresh it
-    if (error?.target?.error?.code === 2) { // MEDIA_ERR_NETWORK
-      fetchNewSignedUrl();
-    }
   };
 
-  const fetchNewSignedUrl = async () => {
-    if (!video) return;
-    
-    try {
-      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-        .from("videos")
-        .createSignedUrl(video.file_path.split("/").pop()!, 3600);
-
-      if (signedUrlError) throw signedUrlError;
-
-      setVideo(prev => prev ? { ...prev, file_path: signedUrlData.signedUrl } : null);
-    } catch (error: any) {
-      toast({
-        title: "Error refreshing video",
-        description: "Please refresh the page to continue watching",
-        variant: "destructive",
-      });
+  const handleReady = () => {
+    console.log("Video ready to play");
+    if (playerRef.current) {
+      // Ensure video can play through
+      const videoElement = playerRef.current.getInternalPlayer();
+      if (videoElement) {
+        videoElement.setAttribute('preload', 'auto');
+      }
     }
   };
 
@@ -165,6 +158,7 @@ const Video = () => {
           <div className="lg:col-span-8">
             <div className="rounded-lg overflow-hidden bg-black aspect-video mb-6 relative">
               <ReactPlayer
+                ref={playerRef}
                 url={video.file_path}
                 width="100%"
                 height="100%"
@@ -175,30 +169,17 @@ const Video = () => {
                 onBuffer={handleBuffer}
                 onBufferEnd={handleBufferEnd}
                 onError={handleError}
+                onReady={handleReady}
                 progressInterval={1000}
                 config={{
                   file: {
                     attributes: {
-                      controlsList: "nodownload",
                       preload: "auto",
+                      controlsList: "nodownload",
                     },
                     forceVideo: true,
-                    forceSafariHLS: true,
-                    hlsOptions: {
-                      maxLoadingDelay: 4,
-                      minAutoBitrate: 0,
-                      lowLatencyMode: true,
-                      backBufferLength: 90,
-                      maxBufferLength: 300,
-                      maxMaxBufferLength: 600,
-                      startLevel: -1,
-                      manifestLoadingTimeOut: 10000,
-                      manifestLoadingMaxRetry: 3,
-                      levelLoadingTimeOut: 10000,
-                      levelLoadingMaxRetry: 3,
-                      fragLoadingTimeOut: 20000,
-                      fragLoadingMaxRetry: 6,
-                    },
+                    forceFLV: false,
+                    forceHLS: false,
                   },
                 }}
                 played={playedSeconds}
