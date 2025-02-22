@@ -13,6 +13,7 @@ export interface VideoDetails {
   file_path: string;
   created_at: string;
   user_id: string;
+  is_public?: boolean;
   transcription_status?: string;
   transcription_text?: string;
   transcription_chunks?: TranscriptionChunk[];

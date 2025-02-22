@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Play, Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Play, Pencil, Trash2, Globe2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +23,7 @@ import {
 import { EditVideoDialog } from "./EditVideoDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./AuthProvider";
 
 interface VideoCardProps {
   id: string;
@@ -32,6 +33,8 @@ interface VideoCardProps {
   description: string;
   thumbnail?: string;
   filePath: string;
+  isPublic?: boolean;
+  userId?: string;
   onDelete?: () => void;
   onUpdate?: () => void;
 }
@@ -44,13 +47,19 @@ const VideoCard = ({
   description,
   thumbnail,
   filePath,
+  isPublic = false,
+  userId,
   onDelete,
   onUpdate,
 }: VideoCardProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const isOwner = user?.id === userId;
 
   const handleDelete = async () => {
     try {
@@ -101,6 +110,32 @@ const VideoCard = ({
     }
   };
 
+  const handlePublish = async () => {
+    try {
+      const { error } = await supabase
+        .from("videos")
+        .update({ is_public: !isPublic })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: isPublic ? "Video unpublished successfully" : "Video published successfully",
+      });
+
+      onUpdate?.();
+    } catch (error: any) {
+      toast({
+        title: isPublic ? "Unpublish failed" : "Publish failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsPublishDialogOpen(false);
+    }
+  };
+
   return (
     <>
       <Card className="overflow-hidden group animate-fade-in">
@@ -121,6 +156,12 @@ const VideoCard = ({
             <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/75 rounded text-xs text-white">
               {duration}
             </div>
+            {isPublic && (
+              <div className="absolute top-2 right-2 px-2 py-1 bg-black/75 rounded text-xs text-white flex items-center gap-1">
+                <Globe2 className="w-3 h-3" />
+                Public
+              </div>
+            )}
           </div>
         </Link>
         <div className="p-4">
@@ -131,34 +172,45 @@ const VideoCard = ({
                 {views.toLocaleString()} views
               </p>
             </Link>
-            <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem 
-                  onClick={() => {
-                    setIsEditDialogOpen(true);
-                    setIsDropdownOpen(false);
-                  }}
-                >
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setIsDeleteDialogOpen(true);
-                    setIsDropdownOpen(false);
-                  }}
-                  className="text-red-600"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {isOwner && (
+              <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      setIsEditDialogOpen(true);
+                      setIsDropdownOpen(false);
+                    }}
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setIsPublishDialogOpen(true);
+                      setIsDropdownOpen(false);
+                    }}
+                  >
+                    <Globe2 className="w-4 h-4 mr-2" />
+                    {isPublic ? "Unpublish" : "Publish"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setIsDeleteDialogOpen(true);
+                      setIsDropdownOpen(false);
+                    }}
+                    className="text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
           <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
             {description}
@@ -184,6 +236,28 @@ const VideoCard = ({
               className="bg-red-600 hover:bg-red-700"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog 
+        open={isPublishDialogOpen} 
+        onOpenChange={setIsPublishDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{isPublic ? "Unpublish" : "Publish"} Video</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isPublic 
+                ? "Are you sure you want to make this video private? Only you will be able to see it."
+                : "Are you sure you want to publish this video? Anyone will be able to see it."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePublish}>
+              {isPublic ? "Unpublish" : "Publish"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

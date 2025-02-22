@@ -70,6 +70,7 @@ export type Database = {
           duration: string
           file_path: string
           id: string
+          is_public: boolean | null
           size: number
           thumbnail_url: string | null
           title: string
@@ -88,6 +89,7 @@ export type Database = {
           duration: string
           file_path: string
           id?: string
+          is_public?: boolean | null
           size: number
           thumbnail_url?: string | null
           title: string
@@ -106,6 +108,7 @@ export type Database = {
           duration?: string
           file_path?: string
           id?: string
+          is_public?: boolean | null
           size?: number
           thumbnail_url?: string | null
           title?: string

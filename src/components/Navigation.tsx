@@ -27,6 +27,16 @@ const Navigation = () => {
                 Dashboard
               </Link>
               <Link
+                to="/my-videos"
+                className={`${
+                  location.pathname === "/my-videos"
+                    ? "text-primary"
+                    : "text-secondary"
+                } hover:text-primary transition-colors`}
+              >
+                My Videos
+              </Link>
+              <Link
                 to="/videos"
                 className={`${
                   location.pathname === "/videos"
@@ -34,7 +44,7 @@ const Navigation = () => {
                     : "text-secondary"
                 } hover:text-primary transition-colors`}
               >
-                Videos
+                Public Videos
               </Link>
             </div>
           )}
