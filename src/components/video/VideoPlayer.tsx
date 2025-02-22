@@ -1,5 +1,6 @@
 
 import ReactPlayer from "react-player";
+import { useState } from "react";
 
 interface VideoPlayerProps {
   url: string;
@@ -8,6 +9,9 @@ interface VideoPlayerProps {
 }
 
 export const VideoPlayer = ({ url, playedSeconds, onProgress }: VideoPlayerProps) => {
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
   if (!url) {
     return (
       <div className="rounded-lg overflow-hidden bg-black aspect-video mb-6 flex items-center justify-center">
@@ -27,24 +31,39 @@ export const VideoPlayer = ({ url, playedSeconds, onProgress }: VideoPlayerProps
         playsinline
         onProgress={onProgress}
         progressInterval={1000}
+        onReady={() => setLoading(false)}
+        onError={(e) => {
+          console.error("Video playback error:", e);
+          setError("Error playing video");
+          setLoading(false);
+        }}
+        onBuffer={() => setLoading(true)}
+        onBufferEnd={() => setLoading(false)}
         config={{
           file: {
             attributes: {
+              crossOrigin: "anonymous",
               controlsList: "nodownload",
             },
             forceVideo: true,
           },
         }}
-        played={playedSeconds}
         fallback={
           <div className="flex items-center justify-center h-full">
             <p className="text-white">Loading video...</p>
           </div>
         }
-        onError={(e) => {
-          console.error("Video playback error:", e);
-        }}
       />
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+          <p className="text-white">Loading video...</p>
+        </div>
+      )}
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+          <p className="text-white">{error}</p>
+        </div>
+      )}
     </div>
   );
 };

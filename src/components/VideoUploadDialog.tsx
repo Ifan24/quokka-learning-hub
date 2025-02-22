@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Progress } from "@/components/ui/progress";
 
 interface VideoUploadDialogProps {
   onUploadComplete?: () => void;
@@ -22,6 +24,7 @@ interface VideoUploadDialogProps {
 export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) => {
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -56,6 +59,7 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
     }
 
     setUploading(true);
+    setUploadProgress(0);
 
     try {
       // Get current user
@@ -66,12 +70,18 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
       const fileExt = file.name.split(".").pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
 
-      // Upload the complete file to Supabase Storage
+      // Upload the complete file to Supabase Storage with progress tracking
       const { error: uploadError } = await supabase.storage
         .from("videos")
         .upload(filePath, file, {
           cacheControl: "3600",
           upsert: false,
+          onUploadProgress: (progress) => {
+            if (progress.totalBytes > 0) {
+              const percent = (progress.bytesUploaded / progress.totalBytes) * 100;
+              setUploadProgress(percent);
+            }
+          },
         });
 
       if (uploadError) throw uploadError;
@@ -107,6 +117,7 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
       setTitle("");
       setDescription("");
       setFile(null);
+      setUploadProgress(0);
       onUploadComplete?.();
     } catch (error: any) {
       console.error("Upload error:", error);
@@ -131,6 +142,9 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Upload Video</DialogTitle>
+          <DialogDescription>
+            Upload a video file (max 50MB)
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
@@ -165,6 +179,14 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
               </p>
             )}
           </div>
+          {uploading && (
+            <div className="space-y-2">
+              <Progress value={uploadProgress} />
+              <p className="text-sm text-muted-foreground text-center">
+                Uploading: {Math.round(uploadProgress)}%
+              </p>
+            </div>
+          )}
           <Button
             onClick={handleUpload}
             disabled={uploading || !file || !title}
