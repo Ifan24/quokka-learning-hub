@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,7 +78,7 @@ const Index = () => {
       <main className="container px-4 py-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Learning Space</h1>
+            <h1 className="text-3xl font-bold">My Learning Space</h1>
             <p className="text-muted-foreground mt-2">
               Manage your private video content and learning materials
             </p>
@@ -87,10 +88,7 @@ const Index = () => {
               placeholder="Search in my videos..."
               className="max-w-sm"
             />
-            <Button variant="default" className="gap-2 bg-primary hover:bg-primary/90 text-white">
-              <Upload className="w-4 h-4" />
-              Upload New Video
-            </Button>
+            <VideoUploadDialog onUploadComplete={handleUploadComplete} />
           </div>
         </div>
 
