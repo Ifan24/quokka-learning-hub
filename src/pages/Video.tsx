@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Transcription } from "@/components/video/Transcription";
 import { VideoChat } from "@/components/video/VideoChat";
 import { VideoQuiz } from "@/components/video/VideoQuiz";
 import type { VideoDetails, TranscriptionChunk } from "@/types/video";
+import ReactPlayer from "react-player";
 
 const Video = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,13 +20,12 @@ const Video = () => {
   const [loading, setLoading] = useState(true);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = useRef<ReactPlayer | null>(null);
   const { toast } = useToast();
 
   const handleSeek = (time: number) => {
     if (videoRef.current) {
-      videoRef.current.currentTime = time;
-      videoRef.current.play();
+      videoRef.current.seekTo(time);
     }
   };
 

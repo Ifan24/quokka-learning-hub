@@ -6,7 +6,7 @@ interface VideoPlayerProps {
   url: string;
 }
 
-export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(({ url }, ref) => {
+export const VideoPlayer = forwardRef<ReactPlayer, VideoPlayerProps>(({ url }, ref) => {
   return (
     <div className="rounded-lg overflow-hidden bg-black aspect-video mb-6">
       <ReactPlayer
