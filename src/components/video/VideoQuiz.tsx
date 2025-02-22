@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -235,8 +236,8 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
 
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -246,7 +247,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
               >
                 <ChevronUp className="h-4 w-4" />
               </Button>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground whitespace-nowrap">
                 Quiz {quizzes.length - currentQuizIndex} of {quizzes.length}
               </div>
               <Button
@@ -266,7 +267,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground whitespace-nowrap">
               Question {currentQuestionIndex + 1} of {totalQuestions}
             </div>
           </div>
@@ -274,6 +275,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
             variant="ghost"
             size="sm"
             onClick={() => onSeek(question.timestamp)}
+            className="whitespace-nowrap"
           >
             <Play className="w-4 h-4 mr-1" />
             {Math.floor(question.timestamp / 60)}:
@@ -281,14 +283,16 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
           </Button>
         </div>
 
-        <h3 className="font-medium text-lg">{question.question}</h3>
+        <div className="min-h-[80px]">
+          <h3 className="font-medium text-lg break-words">{question.question}</h3>
+        </div>
 
         <div className="grid grid-cols-1 gap-2">
           {question.choices.map((choice, idx) => (
             <Button
               key={idx}
               variant="outline"
-              className={`justify-start h-auto py-3 px-4 ${
+              className={`justify-start h-auto py-3 px-4 text-left break-words ${
                 isAnswerRevealed
                   ? idx === question.correctAnswer
                     ? "bg-green-100 dark:bg-green-900 border-green-500"
@@ -300,13 +304,15 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
               onClick={() => handleAnswerSelect(idx)}
               disabled={isAnswerRevealed}
             >
-              {isAnswerRevealed && idx === question.correctAnswer && (
-                <Check className="w-4 h-4 mr-2 text-green-500" />
-              )}
-              {isAnswerRevealed && idx === selectedAnswer && idx !== question.correctAnswer && (
-                <X className="w-4 h-4 mr-2 text-red-500" />
-              )}
-              {choice}
+              <div className="flex items-start">
+                {isAnswerRevealed && idx === question.correctAnswer && (
+                  <Check className="w-4 h-4 mr-2 mt-1 flex-shrink-0 text-green-500" />
+                )}
+                {isAnswerRevealed && idx === selectedAnswer && idx !== question.correctAnswer && (
+                  <X className="w-4 h-4 mr-2 mt-1 flex-shrink-0 text-red-500" />
+                )}
+                <span className="flex-1">{choice}</span>
+              </div>
             </Button>
           ))}
         </div>
@@ -314,7 +320,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
         {isAnswerRevealed && (
           <div className="mt-4 p-4 bg-muted rounded-lg">
             <p className="font-medium">Explanation:</p>
-            <p className="text-muted-foreground">{question.explanation}</p>
+            <p className="text-muted-foreground break-words">{question.explanation}</p>
           </div>
         )}
       </div>
@@ -359,7 +365,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
       </div>
 
       {quizzes.length > 0 && (
-        <div className="flex justify-between mt-4">
+        <div className="flex justify-between mt-4 h-9">
           <Button
             variant="outline"
             size="sm"
