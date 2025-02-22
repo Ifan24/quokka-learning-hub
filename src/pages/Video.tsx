@@ -52,7 +52,7 @@ const Video = () => {
         const parsedVideo: VideoDetails = {
           ...videoData,
           transcription_chunks: videoData.transcription_chunks 
-            ? (videoData.transcription_chunks as TranscriptionChunk[])
+            ? (videoData.transcription_chunks as any as TranscriptionChunk[])
             : undefined
         };
         
@@ -125,7 +125,7 @@ const Video = () => {
           const parsedVideo: VideoDetails = {
             ...updatedVideo,
             transcription_chunks: updatedVideo.transcription_chunks 
-              ? (updatedVideo.transcription_chunks as TranscriptionChunk[])
+              ? (updatedVideo.transcription_chunks as any as TranscriptionChunk[])
               : undefined
           };
           
