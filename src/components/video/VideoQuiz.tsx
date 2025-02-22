@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Wand2, Loader2, Play, ArrowLeft, ArrowRight, Check, X } from "lucide-react";
+import { Wand2, Loader2, Play, ArrowLeft, ArrowRight, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Quiz, QuizQuestion } from "@/types/quiz";
@@ -158,7 +158,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
   };
 
   const handleAnswerSelect = (choiceIndex: number) => {
-    if (selectedAnswer !== null) return; // Prevent selecting after answer is revealed
+    if (selectedAnswer !== null) return;
     setSelectedAnswer(choiceIndex);
   };
 
@@ -166,9 +166,6 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
     const currentQuiz = quizzes[currentQuizIndex];
     if (currentQuestionIndex < currentQuiz.questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
-    } else if (currentQuizIndex < quizzes.length - 1) {
-      setCurrentQuizIndex(prev => prev + 1);
-      setCurrentQuestionIndex(0);
     }
     setSelectedAnswer(null);
   };
@@ -176,12 +173,24 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
   const previousQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
-    } else if (currentQuizIndex > 0) {
-      setCurrentQuizIndex(prev => prev - 1);
-      const prevQuiz = quizzes[currentQuizIndex - 1];
-      setCurrentQuestionIndex(prevQuiz.questions.length - 1);
     }
     setSelectedAnswer(null);
+  };
+
+  const nextQuiz = () => {
+    if (currentQuizIndex < quizzes.length - 1) {
+      setCurrentQuizIndex(prev => prev + 1);
+      setCurrentQuestionIndex(0);
+      setSelectedAnswer(null);
+    }
+  };
+
+  const previousQuiz = () => {
+    if (currentQuizIndex > 0) {
+      setCurrentQuizIndex(prev => prev - 1);
+      setCurrentQuestionIndex(0);
+      setSelectedAnswer(null);
+    }
   };
 
   const renderCurrentQuestion = () => {
@@ -195,9 +204,31 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Quiz {quizzes.length - currentQuizIndex} of {quizzes.length}, 
-            Question {currentQuestionIndex + 1} of {totalQuestions}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={previousQuiz}
+                disabled={currentQuizIndex === 0}
+              >
+                <ChevronUp className="h-4 w-4" />
+              </Button>
+              <div className="text-sm text-muted-foreground">
+                Quiz {quizzes.length - currentQuizIndex} of {quizzes.length}
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={nextQuiz}
+                disabled={currentQuizIndex === quizzes.length - 1}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Question {currentQuestionIndex + 1} of {totalQuestions}
+            </div>
           </div>
           <Button
             variant="ghost"
@@ -293,7 +324,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
             variant="outline"
             size="sm"
             onClick={previousQuestion}
-            disabled={currentQuizIndex === 0 && currentQuestionIndex === 0}
+            disabled={currentQuestionIndex === 0}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Previous
@@ -302,10 +333,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
             variant="outline"
             size="sm"
             onClick={nextQuestion}
-            disabled={
-              currentQuizIndex === quizzes.length - 1 &&
-              currentQuestionIndex === quizzes[currentQuizIndex]?.questions.length - 1
-            }
+            disabled={currentQuestionIndex === quizzes[currentQuizIndex].questions.length - 1}
           >
             Next
             <ArrowRight className="w-4 h-4 ml-2" />
