@@ -35,14 +35,21 @@ Question: ${question}
 Please provide a clear and concise answer based solely on the information provided in the transcription.`
 
     console.log('Sending request to FAL AI...')
-    const result = await fal.subscribe('google/gemini-flash-1.5', {
+    const result = await fal.subscribe("fal-ai/any-llm", {
       input: {
-        prompt,
-        system_prompt: "You are a helpful assistant that answers questions based on video transcriptions. Only use information from the provided transcription to answer questions. If the answer cannot be found in the transcription, say so.",
+        model: "anthropic/claude-3.5-sonnet",
+        prompt: prompt,
+        reasoning: false
       },
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS") {
+          update.logs.map((log) => log.message).forEach(console.log);
+        }
+      }
     })
 
-    console.log('Received response from FAL AI')
+    console.log('Received response from FAL AI:', result)
 
     return new Response(
       JSON.stringify({ success: true, output: result.data.output }),
