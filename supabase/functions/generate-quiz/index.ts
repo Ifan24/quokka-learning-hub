@@ -62,7 +62,7 @@ Requirements:
 
     const result = await fal.subscribe("fal-ai/any-llm", {
       input: {
-        model: "anthropic/claude-3-sonnet",
+        model: "anthropic/claude-3.5-sonnet",
         prompt,
       },
     });
