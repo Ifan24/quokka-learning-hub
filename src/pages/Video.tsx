@@ -34,23 +34,31 @@ const Video = () => {
   useEffect(() => {
     const fetchVideo = async () => {
       try {
-        const { data, error } = await supabase
+        const { data: videoData, error } = await supabase
           .from("videos")
           .select(`
             *,
-            user:profiles!videos_user_id_fkey (
+            user:profiles(
               full_name
             )
           `)
           .eq("id", id)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
+        if (!videoData) {
+          toast({
+            title: "Video not found",
+            description: "The requested video could not be found.",
+            variant: "destructive",
+          });
+          return;
+        }
 
         // Increment view count
         const { error: updateError } = await supabase
           .from("videos")
-          .update({ views: (data.views || 0) + 1 })
+          .update({ views: (videoData.views || 0) + 1 })
           .eq("id", id);
 
         if (updateError) throw updateError;
@@ -58,15 +66,13 @@ const Video = () => {
         // Get video URL
         const { data: { publicUrl } } = supabase.storage
           .from("videos")
-          .getPublicUrl(data.file_path);
+          .getPublicUrl(videoData.file_path);
 
-        const videoData: VideoDetails = {
-          ...data,
+        setVideo({
+          ...videoData,
           file_path: publicUrl,
-          user: data.user || { full_name: null }
-        };
-
-        setVideo(videoData);
+          user: Array.isArray(videoData.user) ? videoData.user[0] : videoData.user
+        });
 
         // Load last watched position
         const lastPosition = localStorage.getItem(`video-progress-${id}`);
