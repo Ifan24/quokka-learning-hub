@@ -8,7 +8,7 @@ const Navigation = () => {
   const location = useLocation();
 
   return (
-    <nav className="w-full border-b">
+    <nav className="w-full border-b bg-white">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link to="/" className="text-primary text-xl font-bold">
@@ -20,9 +20,9 @@ const Navigation = () => {
                 to="/dashboard"
                 className={`${
                   location.pathname === "/dashboard"
-                    ? "text-primary"
-                    : "text-secondary"
-                } hover:text-primary transition-colors`}
+                    ? "text-primary font-medium"
+                    : "text-gray-600 hover:text-primary"
+                } transition-colors`}
               >
                 Dashboard
               </Link>
@@ -30,9 +30,9 @@ const Navigation = () => {
                 to="/videos"
                 className={`${
                   location.pathname === "/videos"
-                    ? "text-primary"
-                    : "text-secondary"
-                } hover:text-primary transition-colors`}
+                    ? "text-primary font-medium"
+                    : "text-gray-600 hover:text-primary"
+                } transition-colors`}
               >
                 Videos
               </Link>
@@ -40,12 +40,12 @@ const Navigation = () => {
           )}
         </div>
         {user ? (
-          <Button variant="outline" onClick={signOut}>
+          <Button variant="outline" onClick={signOut} className="text-gray-600 hover:text-primary">
             Sign Out
           </Button>
         ) : (
           <Link to={location.pathname === "/auth" ? "/" : "/auth"}>
-            <Button variant="outline">
+            <Button variant="outline" className="text-gray-600 hover:text-primary">
               {location.pathname === "/auth" ? "Back to Home" : "Sign In"}
             </Button>
           </Link>
@@ -56,3 +56,4 @@ const Navigation = () => {
 };
 
 export default Navigation;
+
