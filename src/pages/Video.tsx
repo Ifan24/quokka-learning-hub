@@ -242,14 +242,19 @@ const Video = () => {
                   onBufferEnd={handleBufferEnd}
                   onError={handleError}
                   progressInterval={500}
+                  playsinline
                   config={{
                     file: {
+                      forceVideo: true,
                       attributes: {
-                        preload: "auto",
+                        crossOrigin: "anonymous",
+                        playsInline: true,
                         controlsList: "nodownload",
                       },
-                      forceVideo: true,
-                    },
+                      forceFLV: false,
+                      forceHLS: false,
+                      forceDASH: false,
+                    }
                   }}
                 />
               </div>
