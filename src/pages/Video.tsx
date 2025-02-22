@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import ReactPlayer from "react-player";
@@ -19,6 +20,7 @@ interface VideoDetails {
   file_path: string;
   created_at: string;
   user_id: string;
+  total_parts: number;
 }
 
 const Video = () => {
@@ -32,38 +34,44 @@ const Video = () => {
   const playerRef = useRef<ReactPlayer>(null);
   const { toast } = useToast();
   const [currentVideo, setCurrentVideo] = useState("");
-  const [currentPart, setCurrentPart] = useState(1);
+  const [currentPart, setCurrentPart] = useState(0); // Start with base file (part 0)
   const [videoParts, setVideoParts] = useState<string[]>([]);
 
-  const checkAndGetVideoParts = async (filePath: string): Promise<string[]> => {
-    console.log("Checking for video parts...");
-    const parts: string[] = [];
-    let partIndex = 1;
-    let hasMoreParts = true;
-
+  const getVideoUrls = async (videoData: VideoDetails): Promise<string[]> => {
+    console.log("Getting video URLs...");
+    const urls: string[] = [];
+    
     try {
-      while (hasMoreParts) {
-        const partPath = `${filePath}.part${partIndex}`;
-        console.log(`Checking for part: ${partPath}`);
+      // First get the base file URL
+      const { data: baseData, error: baseError } = await supabase.storage
+        .from("videos")
+        .createSignedUrl(videoData.file_path, 7200);
+
+      if (baseError) throw baseError;
+      if (!baseData?.signedUrl) throw new Error("Could not get base file URL");
+      
+      console.log("Got base file URL");
+      urls.push(baseData.signedUrl);
+
+      // Then get all part URLs based on total_parts
+      for (let i = 1; i <= videoData.total_parts; i++) {
+        const partPath = `${videoData.file_path}.part${i}`;
+        console.log(`Getting URL for part${i}`);
         
         const { data: partData, error: partError } = await supabase.storage
           .from("videos")
           .createSignedUrl(partPath, 7200);
 
-        if (partError) {
-          console.log(`No more parts found after part${partIndex - 1}`);
-          hasMoreParts = false;
-        } else if (partData?.signedUrl) {
-          console.log(`Found part${partIndex}`);
-          parts.push(partData.signedUrl);
-          partIndex++;
-        }
+        if (partError) throw partError;
+        if (!partData?.signedUrl) throw new Error(`Could not get URL for part${i}`);
+        
+        urls.push(partData.signedUrl);
       }
 
-      console.log(`Total video parts found: ${parts.length}`);
-      return parts;
+      console.log(`Got URLs for all ${urls.length} parts`);
+      return urls;
     } catch (error) {
-      console.error("Error checking video parts:", error);
+      console.error("Error getting video URLs:", error);
       throw error;
     }
   };
@@ -80,14 +88,15 @@ const Video = () => {
         if (error) throw error;
         setVideo(data);
 
-        const parts = await checkAndGetVideoParts(data.file_path);
-        if (parts.length === 0) {
+        // Get all video URLs at once using total_parts
+        const urls = await getVideoUrls(data);
+        if (urls.length === 0) {
           throw new Error("No video parts found");
         }
 
-        setVideoParts(parts);
-        setCurrentVideo(parts[0]);
-        console.log("Starting with part1");
+        setVideoParts(urls);
+        setCurrentVideo(urls[0]);
+        console.log("Starting with base file");
 
         await supabase
           .from("videos")
@@ -112,8 +121,10 @@ const Video = () => {
   }, [id, toast]);
 
   const handleProgress = ({ played, loaded }: { played: number; loaded: number }) => {
-    const partProgress = ((currentPart - 1) / videoParts.length) * 100;
-    const currentPartProgress = (loaded * (100 / videoParts.length));
+    // Calculate progress including base file
+    const totalParts = video?.total_parts ?? 0;
+    const partProgress = (currentPart / (totalParts + 1)) * 100;
+    const currentPartProgress = (loaded * (100 / (totalParts + 1)));
     setLoadingProgress(Math.round(partProgress + currentPartProgress));
 
     setPlayedSeconds(played);
@@ -122,10 +133,10 @@ const Video = () => {
 
   const handleEnded = () => {
     const nextPart = currentPart + 1;
-    if (nextPart <= videoParts.length) {
+    if (nextPart < videoParts.length) {
       console.log(`Moving to part ${nextPart}`);
       setCurrentPart(nextPart);
-      setCurrentVideo(videoParts[nextPart - 1]);
+      setCurrentVideo(videoParts[nextPart]);
       setIsVideoLoading(true);
     }
   };
@@ -139,12 +150,12 @@ const Video = () => {
     console.error("Video playback error:", error);
     toast({
       title: "Playback Error",
-      description: `Failed to play part ${currentPart}. Trying to reload...`,
+      description: `Failed to play ${currentPart === 0 ? 'base file' : `part ${currentPart}`}. Trying to reload...`,
       variant: "destructive",
     });
 
-    if (videoParts[currentPart - 1]) {
-      setCurrentVideo(videoParts[currentPart - 1]);
+    if (videoParts[currentPart]) {
+      setCurrentVideo(videoParts[currentPart]);
     }
   };
 
@@ -207,7 +218,7 @@ const Video = () => {
                   <div className="text-white text-center mb-4">
                     <div className="mb-2 text-lg font-medium">Loading video...</div>
                     <div className="text-sm text-gray-300">
-                      Part {currentPart}/{videoParts.length} ({Math.round(loadingProgress)}% overall)
+                      {currentPart === 0 ? 'Base file' : `Part ${currentPart}`} of {videoParts.length} ({Math.round(loadingProgress)}% overall)
                     </div>
                   </div>
                   <div className="w-64">
@@ -249,25 +260,25 @@ const Video = () => {
               )}
             </div>
 
-            <h1 className="text-2xl font-bold mb-2">{video.title}</h1>
+            <h1 className="text-2xl font-bold mb-2">{video?.title}</h1>
             
             <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
               <div className="flex items-center">
                 <Eye className="w-4 h-4 mr-1" />
-                {video.views?.toLocaleString() || 0} views
+                {video?.views?.toLocaleString() || 0} views
               </div>
               <div className="flex items-center">
                 <Calendar className="w-4 h-4 mr-1" />
-                {format(new Date(video.created_at), "MMM d, yyyy")}
+                {video?.created_at && format(new Date(video.created_at), "MMM d, yyyy")}
               </div>
-              <div>Duration: {video.duration}</div>
+              <div>Duration: {video?.duration}</div>
             </div>
 
             <Card className="p-4">
               <div>
                 <h2 className="font-semibold mb-1">Description</h2>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {video.description || "No description provided"}
+                  {video?.description || "No description provided"}
                 </p>
               </div>
             </Card>

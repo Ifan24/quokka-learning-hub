@@ -43,6 +43,7 @@ export type Database = {
           size: number
           thumbnail_url: string | null
           title: string
+          total_parts: number | null
           updated_at: string
           user_id: string
           views: number | null
@@ -56,6 +57,7 @@ export type Database = {
           size: number
           thumbnail_url?: string | null
           title: string
+          total_parts?: number | null
           updated_at?: string
           user_id: string
           views?: number | null
@@ -69,6 +71,7 @@ export type Database = {
           size?: number
           thumbnail_url?: string | null
           title?: string
+          total_parts?: number | null
           updated_at?: string
           user_id?: string
           views?: number | null
