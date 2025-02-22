@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,32 +6,11 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Quiz, QuizQuestion } from "@/types/quiz";
 import type { VideoDetails } from "@/types/video";
-import type { Json } from "@/integrations/supabase/types";
 
 interface VideoQuizProps {
   video: VideoDetails;
   onSeek: (time: number) => void;
 }
-
-// Type guard to validate quiz question format
-const isValidQuizQuestion = (q: Json): q is QuizQuestion => {
-  if (!q || typeof q !== 'object') return false;
-  return (
-    typeof (q as any).timestamp === 'number' &&
-    typeof (q as any).question === 'string' &&
-    Array.isArray((q as any).choices) &&
-    (q as any).choices.length === 4 &&
-    typeof (q as any).correctAnswer === 'number' &&
-    (q as any).correctAnswer >= 0 &&
-    (q as any).correctAnswer <= 3 &&
-    typeof (q as any).explanation === 'string'
-  );
-};
-
-// Type guard to validate array of quiz questions
-const isValidQuizQuestionArray = (questions: Json): questions is QuizQuestion[] => {
-  return Array.isArray(questions) && questions.every(isValidQuizQuestion);
-};
 
 export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -57,21 +35,19 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
 
       if (error) throw error;
 
-      // Transform and validate the data
-      const validQuizzes: Quiz[] = [];
-      
-      for (const rawQuiz of data || []) {
-        if (isValidQuizQuestionArray(rawQuiz.questions)) {
-          validQuizzes.push({
-            id: rawQuiz.id,
-            video_id: rawQuiz.video_id,
-            questions: rawQuiz.questions,
-            created_at: rawQuiz.created_at
-          });
-        } else {
-          console.warn("Invalid quiz data found:", rawQuiz);
-        }
-      }
+      // Cast the data to Quiz type after basic validation
+      const validQuizzes = (data || []).filter(quiz => 
+        Array.isArray(quiz.questions) && 
+        quiz.questions.every(q => 
+          typeof q === 'object' &&
+          q !== null &&
+          typeof (q as any).timestamp === 'number' &&
+          typeof (q as any).question === 'string' &&
+          Array.isArray((q as any).choices) &&
+          (q as any).choices.length === 4 &&
+          typeof (q as any).correctAnswer === 'number'
+        )
+      ) as Quiz[];
 
       setQuizzes(validQuizzes);
     } catch (error: any) {
@@ -87,7 +63,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
   };
 
   const generateQuiz = async () => {
-    if (!video.transcription_text) {
+    if (!video.transcription_chunks) {
       toast({
         title: "Transcription Required",
         description: "Please generate a transcription first to create a quiz.",
@@ -105,6 +81,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
             videoId: video.id,
             title: video.title,
             transcription: video.transcription_text,
+            transcription_chunks: video.transcription_chunks,
           },
         });
 
@@ -114,32 +91,11 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
         throw new Error("Invalid quiz data received from AI");
       }
 
-      // Type guard to validate quiz data
-      const isValidQuizQuestion = (q: any): q is QuizQuestion => {
-        return (
-          typeof q.timestamp === 'number' &&
-          typeof q.question === 'string' &&
-          Array.isArray(q.choices) &&
-          q.choices.length === 4 &&
-          typeof q.correctAnswer === 'number' &&
-          q.correctAnswer >= 0 &&
-          q.correctAnswer <= 3 &&
-          typeof q.explanation === 'string'
-        );
-      };
-
-      const questions = quizData.questions.map((q: any): QuizQuestion => {
-        if (!isValidQuizQuestion(q)) {
-          throw new Error("Invalid question format received from AI");
-        }
-        return q as QuizQuestion;
-      });
-
       const { data: savedQuiz, error: saveError } = await supabase
         .from("quizzes")
         .insert({
           video_id: video.id,
-          questions: questions,
+          questions: quizData.questions,
         })
         .select("*")
         .single();
@@ -149,7 +105,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
       const newQuiz: Quiz = {
         id: savedQuiz.id,
         video_id: savedQuiz.video_id,
-        questions: questions,
+        questions: quizData.questions,
         created_at: savedQuiz.created_at,
       };
 
@@ -274,7 +230,7 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
           <h2 className="font-semibold">Quiz</h2>
           <Button
             onClick={generateQuiz}
-            disabled={isGenerating || !video.transcription_text}
+            disabled={isGenerating || !video.transcription_chunks}
           >
             {isGenerating ? (
               <>

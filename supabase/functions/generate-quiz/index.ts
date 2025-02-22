@@ -15,9 +15,9 @@ serve(async (req) => {
   }
 
   try {
-    const { videoId, title, transcription } = await req.json();
+    const { videoId, title, transcription, transcription_chunks } = await req.json();
 
-    if (!videoId || !title || !transcription) {
+    if (!videoId || !title || !transcription_chunks) {
       throw new Error("Missing required parameters");
     }
 
@@ -46,6 +46,13 @@ serve(async (req) => {
       ?.flatMap(quiz => (quiz.questions as any[])?.map(q => q.question) || [])
       .filter(Boolean);
 
+    // Format transcription chunks for better context
+    const formattedChunks = transcription_chunks.map((chunk: any) => {
+      const startTime = chunk.timestamp[0];
+      const endTime = chunk.timestamp[1];
+      return `[${Math.floor(startTime/60)}:${Math.floor(startTime%60).toString().padStart(2, '0')} - ${Math.floor(endTime/60)}:${Math.floor(endTime%60).toString().padStart(2, '0')}] ${chunk.text}`;
+    }).join("\n");
+
     fal.config({
       credentials: apiKey,
     });
@@ -55,8 +62,8 @@ serve(async (req) => {
     const prompt = `Generate a quiz based on this video content.
 Title: ${title}
 
-Content:
-${transcription}
+Content (with timestamps):
+${formattedChunks}
 
 ${existingQuestions?.length ? `\nPreviously generated questions (DO NOT generate similar or identical questions):\n- ${existingQuestions.join("\n- ")}` : ''}
 
@@ -75,7 +82,7 @@ Please generate 5 UNIQUE and DIFFERENT multiple-choice questions in the followin
 
 Requirements:
 1. Questions should be challenging but fair
-2. All timestamps should correspond to relevant moments in the video
+2. IMPORTANT: Use the exact timestamps from the transcription chunks where the answer can be found. The timestamp should be the starting time (first number) from the relevant chunk.
 3. Provide 4 choices for each question
 4. Include clear explanations for the correct answers
 5. Return valid JSON that exactly matches the format above
@@ -113,7 +120,7 @@ Requirements:
         throw new Error("Invalid quiz data structure");
       }
 
-      // Validate each question
+      // Validate each question and ensure timestamp exists in chunks
       quizData.questions.forEach((q: any, index: number) => {
         if (
           typeof q.timestamp !== 'number' ||
@@ -126,6 +133,17 @@ Requirements:
           typeof q.explanation !== 'string'
         ) {
           throw new Error(`Invalid question format at index ${index}`);
+        }
+
+        // Verify that the timestamp exists in one of the chunks
+        const timestampExists = transcription_chunks.some(
+          (chunk: any) => 
+            q.timestamp >= chunk.timestamp[0] && 
+            q.timestamp <= chunk.timestamp[1]
+        );
+
+        if (!timestampExists) {
+          throw new Error(`Question ${index + 1} has an invalid timestamp that doesn't match any transcription chunk`);
         }
       });
 
