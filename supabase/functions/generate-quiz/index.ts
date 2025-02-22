@@ -29,6 +29,8 @@ serve(async (req) => {
       credentials: apiKey,
     });
 
+    console.log("Generating quiz for video:", videoId);
+
     const prompt = `Generate a quiz based on this video content.
 Title: ${title}
 
@@ -55,6 +57,8 @@ Requirements:
 4. Include clear explanations for the correct answers
 5. Return valid JSON that exactly matches the format above`;
 
+    console.log("Sending request to FAL AI...");
+
     const result = await fal.subscribe("fal-ai/any-llm", {
       input: {
         model: "anthropic/claude-3.5-sonnet",
@@ -62,10 +66,14 @@ Requirements:
       },
     });
 
+    console.log("Received response from FAL AI");
+
     let quizData;
     try {
       quizData = JSON.parse(result.output);
+      console.log("Successfully parsed quiz data");
     } catch (error) {
+      console.error("Failed to parse quiz data:", error);
       throw new Error("Failed to parse quiz data from AI response");
     }
 
@@ -73,6 +81,7 @@ Requirements:
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    console.error("Error in generate-quiz function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

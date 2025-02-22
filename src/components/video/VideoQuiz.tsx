@@ -43,6 +43,11 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
 
       if (generationError) throw generationError;
 
+      // Ensure we have valid quiz data
+      if (!quizData?.questions || !Array.isArray(quizData.questions)) {
+        throw new Error("Invalid quiz data received from AI");
+      }
+
       const { data: savedQuiz, error: saveError } = await supabase
         .from("quizzes")
         .insert({
@@ -54,7 +59,15 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
 
       if (saveError) throw saveError;
 
-      setQuiz(savedQuiz as Quiz);
+      // Cast the savedQuiz to ensure type safety
+      const typedQuiz: Quiz = {
+        id: savedQuiz.id,
+        video_id: savedQuiz.video_id,
+        questions: savedQuiz.questions as QuizQuestion[],
+        created_at: savedQuiz.created_at,
+      };
+
+      setQuiz(typedQuiz);
       toast({
         title: "Quiz Generated",
         description: "Your quiz is ready!",
