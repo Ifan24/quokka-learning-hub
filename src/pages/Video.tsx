@@ -47,12 +47,20 @@ const Video = () => {
 
         if (updateError) throw updateError;
 
-        // Get video URL
-        const { data: { publicUrl } } = supabase.storage
+        // Get signed URL with proper headers for streaming
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from("videos")
-          .getPublicUrl(data.file_path);
+          .createSignedUrl(data.file_path, 3600, {
+            transform: {
+              width: 1920,
+              height: 1080,
+              quality: 75,
+            }
+          });
 
-        setVideo({ ...data, file_path: publicUrl });
+        if (signedUrlError) throw signedUrlError;
+
+        setVideo({ ...data, file_path: signedUrlData.signedUrl });
 
         // Load last watched position
         const lastPosition = localStorage.getItem(`video-progress-${id}`);
@@ -138,6 +146,12 @@ const Video = () => {
                   file: {
                     attributes: {
                       controlsList: "nodownload",
+                      preload: "auto",
+                    },
+                    forceVideo: true,
+                    hlsOptions: {
+                      enableWorker: true,
+                      debug: false,
                     },
                   },
                 }}
