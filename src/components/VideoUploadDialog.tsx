@@ -70,9 +70,16 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
       const fileExt = file.name.split(".").pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
 
-      // Use XMLHttpRequest to track upload progress
-      const xhr = new XMLHttpRequest();
-      const uploadPromise = new Promise<void>((resolve, reject) => {
+      // Upload to Supabase Storage using custom XMLHttpRequest for progress tracking
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const { data: uploadData } = await supabase.storage.from('videos').getUploadUrl(filePath);
+      if (!uploadData?.url) throw new Error('Failed to get upload URL');
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
         xhr.upload.addEventListener('progress', (event) => {
           if (event.lengthComputable) {
             const percentage = (event.loaded / event.total) * 100;
@@ -80,53 +87,48 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
           }
         });
 
-        xhr.addEventListener('error', () => {
-          reject(new Error('Upload failed'));
-        });
-
-        xhr.addEventListener('load', () => {
+        xhr.addEventListener('load', async () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
+            try {
+              // Get the public URL for verification
+              const { data: { publicUrl } } = supabase.storage
+                .from("videos")
+                .getPublicUrl(filePath);
+
+              console.log("Uploaded video URL:", publicUrl);
+
+              // Insert video metadata into the database
+              const { error: dbError } = await supabase
+                .from("videos")
+                .insert({
+                  title,
+                  description,
+                  file_path: filePath,
+                  duration: "0:00",
+                  views: 0,
+                  size: file.size,
+                  user_id: user.id
+                });
+
+              if (dbError) throw dbError;
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
           } else {
             reject(new Error(`Upload failed with status ${xhr.status}`));
           }
         });
+
+        xhr.addEventListener('error', () => {
+          reject(new Error('Upload failed'));
+        });
+
+        xhr.open('PUT', uploadData.url);
+        xhr.setRequestHeader('Content-Type', file.type);
+        xhr.setRequestHeader('x-upsert', 'true');
+        xhr.send(file);
       });
-
-      // Upload the file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from("videos")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Wait for the progress tracking to complete
-      await uploadPromise;
-
-      // Get the public URL for verification
-      const { data: { publicUrl } } = supabase.storage
-        .from("videos")
-        .getPublicUrl(filePath);
-
-      console.log("Uploaded video URL:", publicUrl); // Debug log
-
-      // Insert video metadata into the database
-      const { error: dbError } = await supabase
-        .from("videos")
-        .insert({
-          title,
-          description,
-          file_path: filePath,
-          duration: "0:00", // This will be updated when the video is loaded
-          views: 0,
-          size: file.size,
-          user_id: user.id
-        });
-
-      if (dbError) throw dbError;
 
       toast({
         title: "Success",
@@ -139,6 +141,7 @@ export const VideoUploadDialog = ({ onUploadComplete }: VideoUploadDialogProps) 
       setFile(null);
       setUploadProgress(0);
       onUploadComplete?.();
+
     } catch (error: any) {
       console.error("Upload error:", error);
       toast({
