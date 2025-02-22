@@ -5,6 +5,7 @@ import Navigation from "@/components/Navigation";
 import StatsCard from "@/components/StatsCard";
 import VideoCard from "@/components/VideoCard";
 import { Clock, Film, Upload, User } from "lucide-react";
+import { VideoUploadDialog } from "@/components/VideoUploadDialog";
 
 const mockVideos = [
   {
@@ -44,10 +45,7 @@ const Index = () => {
               placeholder="Search in my videos..."
               className="max-w-sm"
             />
-            <Button className="whitespace-nowrap">
-              <Upload className="w-4 h-4 mr-2" />
-              Upload New Video
-            </Button>
+            <VideoUploadDialog />
           </div>
         </div>
 
