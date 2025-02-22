@@ -26,6 +26,7 @@ const Video = () => {
   const [video, setVideo] = useState<VideoDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [playedSeconds, setPlayedSeconds] = useState(0);
+  const [isBuffering, setIsBuffering] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -82,6 +83,42 @@ const Video = () => {
     localStorage.setItem(`video-progress-${id}`, playedSeconds.toString());
   };
 
+  const handleBuffer = () => {
+    setIsBuffering(true);
+  };
+
+  const handleBufferEnd = () => {
+    setIsBuffering(false);
+  };
+
+  const handleError = (error: any) => {
+    console.error("Video playback error:", error);
+    // If the error is due to expired URL, refresh it
+    if (error?.target?.error?.code === 2) { // MEDIA_ERR_NETWORK
+      fetchNewSignedUrl();
+    }
+  };
+
+  const fetchNewSignedUrl = async () => {
+    if (!video) return;
+    
+    try {
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        .from("videos")
+        .createSignedUrl(video.file_path.split("/").pop()!, 3600);
+
+      if (signedUrlError) throw signedUrlError;
+
+      setVideo(prev => prev ? { ...prev, file_path: signedUrlData.signedUrl } : null);
+    } catch (error: any) {
+      toast({
+        title: "Error refreshing video",
+        description: "Please refresh the page to continue watching",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -126,7 +163,7 @@ const Video = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Video Player and Details */}
           <div className="lg:col-span-8">
-            <div className="rounded-lg overflow-hidden bg-black aspect-video mb-6">
+            <div className="rounded-lg overflow-hidden bg-black aspect-video mb-6 relative">
               <ReactPlayer
                 url={video.file_path}
                 width="100%"
@@ -135,20 +172,32 @@ const Video = () => {
                 playing
                 playsinline
                 onProgress={handleProgress}
+                onBuffer={handleBuffer}
+                onBufferEnd={handleBufferEnd}
+                onError={handleError}
                 progressInterval={1000}
                 config={{
                   file: {
                     attributes: {
                       controlsList: "nodownload",
-                      preload: "metadata",
                     },
                     forceVideo: true,
-                    forceHLS: false,
-                    forceFLV: false,
+                    forceSafariHLS: true,
+                    hlsOptions: {
+                      maxLoadingDelay: 4,
+                      minAutoBitrate: 0,
+                      lowLatencyMode: true,
+                      backBufferLength: 90,
+                    },
                   },
                 }}
                 played={playedSeconds}
               />
+              {isBuffering && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                  <div className="text-white">Loading...</div>
+                </div>
+              )}
             </div>
 
             <h1 className="text-2xl font-bold mb-2">{video.title}</h1>
