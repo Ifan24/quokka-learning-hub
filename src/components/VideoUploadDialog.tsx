@@ -207,7 +207,7 @@ export function VideoUploadDialog({
     setOpen(newOpen);
   }}>
       <DialogTrigger asChild>
-        <Button className="whitespace-normal">
+        <Button className="">
           <Upload className="w-4 h-4 mr-2" />
           Upload New Video
         </Button>
