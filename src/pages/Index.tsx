@@ -19,6 +19,8 @@ interface Video {
   thumbnail_url?: string;
   file_path: string;
   created_at: string;
+  is_public: boolean;
+  user_id: string;
 }
 
 const Index = () => {
@@ -39,6 +41,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from("videos")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -137,6 +140,8 @@ const Index = () => {
                 description={video.description || ""}
                 thumbnail={video.thumbnail_url}
                 filePath={video.file_path}
+                isPublic={video.is_public}
+                userId={video.user_id}
                 onDelete={handleDelete}
                 onUpdate={handleUpdate}
               />
