@@ -1,4 +1,5 @@
 
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Navigation from "@/components/Navigation";
@@ -6,29 +7,62 @@ import StatsCard from "@/components/StatsCard";
 import VideoCard from "@/components/VideoCard";
 import { Clock, Film, Upload, User } from "lucide-react";
 import { VideoUploadDialog } from "@/components/VideoUploadDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
-const mockVideos = [
-  {
-    title: "React 18 New Features Deep Dive",
-    duration: "45:30",
-    views: 1200,
-    description: "Explore React 18 concurrent features and automatic batching functionality",
-  },
-  {
-    title: "Machine Learning Fundamentals",
-    duration: "1:20:00",
-    views: 850,
-    description: "Introduction to machine learning, covering supervised and unsupervised learning",
-  },
-  {
-    title: "NextJS Data Fetching Strategies",
-    duration: "55:45",
-    views: 960,
-    description: "Detailed explanation of NextJS SSR, SSG, and ISR data fetching methods",
-  }
-];
+interface Video {
+  id: string;
+  title: string;
+  description: string;
+  duration: string;
+  views: number;
+  thumbnail?: string;
+  created_at: string;
+}
 
 const Index = () => {
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const fetchVideos = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("videos")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setVideos(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error fetching videos",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVideos();
+  }, []);
+
+  const handleUploadComplete = () => {
+    fetchVideos();
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -45,7 +79,7 @@ const Index = () => {
               placeholder="Search in my videos..."
               className="max-w-sm"
             />
-            <VideoUploadDialog />
+            <VideoUploadDialog onUploadComplete={handleUploadComplete} />
           </div>
         </div>
 
@@ -53,13 +87,13 @@ const Index = () => {
           <StatsCard
             icon={<Film className="w-5 h-5" />}
             title="My Videos"
-            value="12"
+            value={videos.length.toString()}
             subtitle="Total uploaded videos"
           />
           <StatsCard
             icon={<Clock className="w-5 h-5" />}
             title="Learning Time"
-            value="8.5 hours"
+            value={`${Math.floor(videos.length * 0.75)} hours`}
             subtitle="Total video content duration"
           />
           <StatsCard
@@ -71,17 +105,32 @@ const Index = () => {
           <StatsCard
             icon={<Upload className="w-5 h-5" />}
             title="Last Upload"
-            value="2 days ago"
+            value={videos.length > 0 ? new Date(videos[0].created_at).toLocaleDateString() : "No uploads"}
             subtitle="Latest content update"
           />
         </div>
 
         <h2 className="text-2xl font-semibold mb-4">My Videos</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockVideos.map((video, index) => (
-            <VideoCard key={index} {...video} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center text-muted-foreground py-8">Loading...</div>
+        ) : videos.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {videos.map((video) => (
+              <VideoCard
+                key={video.id}
+                title={video.title}
+                duration={video.duration}
+                views={video.views || 0}
+                description={video.description || ""}
+                thumbnail={video.thumbnail}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-muted-foreground py-8">
+            No videos uploaded yet. Click the &quot;Upload New Video&quot; button to get started.
+          </div>
+        )}
       </main>
     </div>
   );
