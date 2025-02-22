@@ -1,53 +1,65 @@
 
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "./AuthProvider";
+import { Settings, LogOut, User } from "lucide-react";
 
 const Navigation = () => {
   const { user, signOut } = useAuth();
-  const location = useLocation();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   return (
-    <nav className="w-full border-b">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <Link to="/" className="text-primary text-xl font-bold">
-            Quokka
-          </Link>
-          {user && (
-            <div className="hidden md:flex gap-6">
-              <Link
-                to="/dashboard"
-                className={`${
-                  location.pathname === "/dashboard"
-                    ? "text-primary"
-                    : "text-secondary"
-                } hover:text-primary transition-colors`}
-              >
-                Dashboard
-              </Link>
-              <Link
-                to="/videos"
-                className={`${
-                  location.pathname === "/videos"
-                    ? "text-primary"
-                    : "text-secondary"
-                } hover:text-primary transition-colors`}
-              >
-                Videos
-              </Link>
-            </div>
-          )}
-        </div>
+    <nav className="border-b bg-background">
+      <div className="container px-4 h-14 flex items-center justify-between">
+        <Link to="/" className="font-semibold">
+          Quokka Learning
+        </Link>
+
         {user ? (
-          <Button variant="outline" onClick={signOut}>
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-4">
+            <Link to="/videos">
+              <Button variant="ghost">Videos</Button>
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="cursor-pointer">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ) : (
-          <Link to={location.pathname === "/auth" ? "/" : "/auth"}>
-            <Button variant="outline">
-              {location.pathname === "/auth" ? "Back to Home" : "Sign In"}
-            </Button>
+          <Link to="/auth">
+            <Button>Sign In</Button>
           </Link>
         )}
       </div>

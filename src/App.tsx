@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Video from "./pages/Video";
 import Videos from "./pages/Videos";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import "./App.css";
 
@@ -21,6 +22,7 @@ function App() {
           <Route path="/auth" element={<Auth />} />
           <Route path="/videos" element={<Videos />} />
           <Route path="/videos/:id" element={<Video />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
