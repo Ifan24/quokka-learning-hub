@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
@@ -28,8 +27,7 @@ import { Loader2 } from "lucide-react";
 export default function Video() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const params = useParams<{ videoId: string }>();
-  const videoId = params.videoId;
+  const { id } = useParams<{ id: string }>();
   const [video, setVideo] = useState<any>(null);
   const [transcription, setTranscription] = useState<string | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -39,10 +37,10 @@ export default function Video() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("Component mounted, videoId:", videoId);
+    console.log("Component mounted, video id:", id);
     const fetchVideo = async () => {
-      if (!videoId) {
-        console.error("No videoId provided");
+      if (!id) {
+        console.error("No video ID provided");
         setError("No video ID provided");
         setIsLoading(false);
         return;
@@ -56,12 +54,12 @@ export default function Video() {
       }
 
       try {
-        console.log("Starting video fetch. VideoID:", videoId, "UserID:", user.id);
+        console.log("Starting video fetch. Video ID:", id, "UserID:", user.id);
         
         const { data, error } = await supabase
           .from("videos")
           .select("*")
-          .eq("id", videoId)
+          .eq("id", id)
           .maybeSingle();
 
         if (error) {
@@ -70,7 +68,7 @@ export default function Video() {
         }
 
         if (!data) {
-          console.error("No video found with ID:", videoId);
+          console.error("No video found with ID:", id);
           throw new Error("Video not found");
         }
 
@@ -93,10 +91,10 @@ export default function Video() {
     };
 
     fetchVideo();
-  }, [videoId, user, toast]);
+  }, [id, user, toast]);
 
   const handleTranscribe = async () => {
-    if (!videoId || !user) return;
+    if (!id || !user) return;
     
     try {
       await checkAndDeductCredits(user.id);
@@ -104,7 +102,7 @@ export default function Video() {
       setIsTranscribing(true);
       const { data, error } = await supabase.functions.invoke("transcribe", {
         body: {
-          video_id: videoId,
+          video_id: id,
         },
       });
 
@@ -134,14 +132,14 @@ export default function Video() {
   };
 
   const handleUpdateTitle = async () => {
-    if (!videoId) return;
+    if (!id) return;
 
     setIsUpdatingTitle(true);
     try {
       const { error } = await supabase
         .from("videos")
         .update({ title: newTitle })
-        .eq("id", videoId);
+        .eq("id", id);
 
       if (error) {
         throw error;
@@ -170,7 +168,7 @@ export default function Video() {
           <Loader2 className="h-8 w-8 animate-spin" />
           <span className="ml-2">Loading video...</span>
         </div>
-        <p className="text-sm text-muted-foreground">Video ID: {videoId}</p>
+        <p className="text-sm text-muted-foreground">Video ID: {id}</p>
       </div>
     );
   }
@@ -186,7 +184,7 @@ export default function Video() {
           <CardContent>
             <p>Details:</p>
             <ul className="list-disc pl-4">
-              <li>Video ID: {videoId}</li>
+              <li>Video ID: {id}</li>
               <li>User authenticated: {user ? "Yes" : "No"}</li>
             </ul>
           </CardContent>
@@ -288,13 +286,13 @@ export default function Video() {
             <AccordionItem value="chat">
               <AccordionTrigger>Video Chat</AccordionTrigger>
               <AccordionContent>
-                <VideoChat videoId={videoId!} />
+                <VideoChat videoId={id!} />
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="quiz">
               <AccordionTrigger>Video Quiz</AccordionTrigger>
               <AccordionContent>
-                <VideoQuiz videoId={videoId!} />
+                <VideoQuiz videoId={id!} />
               </AccordionContent>
             </AccordionItem>
           </Accordion>
