@@ -38,17 +38,31 @@ serve(async (req) => {
       model_id: "eleven_multilingual_v2"
     })
 
-    if (!audioBuffer) {
+    if (!audioBuffer || audioBuffer.byteLength === 0) {
+      console.error('No audio data received from ElevenLabs')
       throw new Error('Failed to generate speech')
     }
 
-    // The response is already a buffer, so we can convert it directly to base64
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)))
+    console.log('Audio buffer size:', audioBuffer.byteLength, 'bytes')
 
-    console.log('Successfully generated speech')
+    // Convert to base64 using Buffer for larger audio files
+    const uint8Array = new Uint8Array(audioBuffer)
+    const chunks = []
+    const chunkSize = 8192
+    
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      chunks.push(String.fromCharCode.apply(null, uint8Array.slice(i, i + chunkSize)))
+    }
+    
+    const base64Audio = btoa(chunks.join(''))
+
+    console.log('Successfully generated speech, base64 length:', base64Audio.length)
 
     return new Response(
-      JSON.stringify({ audioContent: base64Audio }),
+      JSON.stringify({ 
+        audioContent: base64Audio,
+        size: audioBuffer.byteLength
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
