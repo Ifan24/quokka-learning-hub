@@ -18,6 +18,7 @@ const Video = () => {
   const videoRef = useRef<ReactPlayer | null>(null);
   const [widgetLoaded, setWidgetLoaded] = useState(false);
   const [widgetError, setWidgetError] = useState<string | null>(null);
+  const checkAttemptsRef = useRef(0);
 
   const handleSeek = (time: number) => {
     if (videoRef.current) {
@@ -29,6 +30,8 @@ const Video = () => {
     // Check if the widget script is loaded
     const checkWidget = () => {
       const widget = document.querySelector('elevenlabs-convai');
+      console.log('Checking for widget...', widget ? 'found' : 'not found', 'attempt:', checkAttemptsRef.current);
+      
       if (widget) {
         setWidgetLoaded(true);
         if (video?.transcription_text) {
@@ -43,13 +46,23 @@ const Video = () => {
           widget.setAttribute('override-config', JSON.stringify(overrideConfig));
         }
       } else {
-        setWidgetError('Widget not loaded. Please refresh the page.');
+        checkAttemptsRef.current += 1;
+        if (checkAttemptsRef.current >= 30) { // Try for 30 seconds (30 attempts * 1000ms)
+          setWidgetError('Widget failed to load. Please refresh the page.');
+          return;
+        }
+        // Continue checking every second until widget is found or max attempts reached
+        setTimeout(checkWidget, 1000);
       }
     };
 
-    // Wait a bit for the script to load before checking
-    const timeoutId = setTimeout(checkWidget, 2000);
-    return () => clearTimeout(timeoutId);
+    // Start checking for widget
+    checkWidget();
+
+    // Cleanup function
+    return () => {
+      checkAttemptsRef.current = 30; // Stop any ongoing checks
+    };
   }, [video?.transcription_text]);
 
   if (loading) {
@@ -80,10 +93,10 @@ const Video = () => {
         </div>
       </div>
 
-      {!widgetLoaded && (
+      {!widgetLoaded && !widgetError && (
         <div className="fixed bottom-4 right-4 bg-secondary p-4 rounded-lg shadow-lg">
           <div className="animate-spin h-5 w-5 mr-2 border-2 border-primary border-t-transparent rounded-full inline-block"></div>
-          <span>Loading AI Chat widget...</span>
+          <span>Loading AI Chat widget... {checkAttemptsRef.current}/30</span>
         </div>
       )}
       
