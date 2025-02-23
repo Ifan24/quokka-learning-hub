@@ -1,6 +1,5 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { ElevenLabsClient } from "npm:elevenlabs@1.51.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,25 +26,33 @@ serve(async (req) => {
 
     console.log('Generating speech for text:', text)
 
-    const client = new ElevenLabsClient({
-      apiKey: apiKey
+    // Use the same voice ID as in the example
+    const VOICE_ID = '21m00Tcm4TlvDq8ikWAM'
+
+    // Make direct API call to ElevenLabs
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+      method: 'POST',
+      headers: {
+        'accept': 'audio/mpeg',
+        'content-type': 'application/json',
+        'xi-api-key': apiKey
+      },
+      body: JSON.stringify({
+        text: text
+      })
     })
 
-    // Get the audio buffer directly from the API
-    const audioBuffer = await client.textToSpeech.convert("JBFqnCBsd6RMkjVDRZzb", {
-      output_format: "mp3_44100_128",
-      text: text,
-      model_id: "eleven_multilingual_v2"
-    })
-
-    if (!audioBuffer || audioBuffer.byteLength === 0) {
-      console.error('No audio data received from ElevenLabs')
-      throw new Error('Failed to generate speech')
+    if (!response.ok) {
+      const error = await response.json()
+      console.error('ElevenLabs API error:', error)
+      throw new Error(error.detail?.message || 'Failed to generate speech')
     }
 
+    // Get the audio data as ArrayBuffer
+    const audioBuffer = await response.arrayBuffer()
     console.log('Audio buffer size:', audioBuffer.byteLength, 'bytes')
 
-    // Convert to base64 using Buffer for larger audio files
+    // Convert ArrayBuffer to Base64
     const uint8Array = new Uint8Array(audioBuffer)
     const chunks = []
     const chunkSize = 8192
@@ -55,7 +62,6 @@ serve(async (req) => {
     }
     
     const base64Audio = btoa(chunks.join(''))
-
     console.log('Successfully generated speech, base64 length:', base64Audio.length)
 
     return new Response(
