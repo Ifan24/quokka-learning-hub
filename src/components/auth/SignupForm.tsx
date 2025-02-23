@@ -46,7 +46,7 @@ export const SignupForm = ({ onToggleMode, onSignupSuccess }: SignupFormProps) =
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <label htmlFor="fullName" className="text-sm font-medium text-[#403E43]">
+        <label htmlFor="fullName" className="text-sm font-medium text-secondary">
           Full Name
         </label>
         <Input
@@ -58,7 +58,7 @@ export const SignupForm = ({ onToggleMode, onSignupSuccess }: SignupFormProps) =
         />
       </div>
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium text-[#403E43]">
+        <label htmlFor="email" className="text-sm font-medium text-secondary">
           Email
         </label>
         <Input
@@ -70,7 +70,7 @@ export const SignupForm = ({ onToggleMode, onSignupSuccess }: SignupFormProps) =
         />
       </div>
       <div className="space-y-2">
-        <label htmlFor="password" className="text-sm font-medium text-[#403E43]">
+        <label htmlFor="password" className="text-sm font-medium text-secondary">
           Password
         </label>
         <Input
@@ -82,16 +82,16 @@ export const SignupForm = ({ onToggleMode, onSignupSuccess }: SignupFormProps) =
           minLength={6}
         />
       </div>
-      <Button type="submit" className="w-full bg-[#FEC6A1] hover:bg-[#FDB68F] text-[#403E43]" disabled={isLoading}>
+      <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? "Loading..." : "Create Account"}
       </Button>
       
-      <p className="text-center text-sm text-[#8A898C]">
+      <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <button
           type="button"
           onClick={onToggleMode}
-          className="text-[#FEC6A1] hover:underline"
+          className="text-primary hover:underline"
         >
           Sign In
         </button>

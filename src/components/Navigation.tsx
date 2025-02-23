@@ -8,10 +8,10 @@ const Navigation = () => {
   const location = useLocation();
 
   return (
-    <nav className="w-full border-b bg-[#FDE1D3]">
+    <nav className="w-full border-b">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link to="/" className="text-[#FEC6A1] text-xl font-bold">
+          <Link to="/" className="text-primary text-xl font-bold">
             Quokka
           </Link>
           {user && (
@@ -20,9 +20,9 @@ const Navigation = () => {
                 to="/dashboard"
                 className={`${
                   location.pathname === "/dashboard"
-                    ? "text-[#FEC6A1]"
-                    : "text-[#403E43]"
-                } hover:text-[#FEC6A1] transition-colors`}
+                    ? "text-primary"
+                    : "text-secondary"
+                } hover:text-primary transition-colors`}
               >
                 Dashboard
               </Link>
@@ -30,9 +30,9 @@ const Navigation = () => {
                 to="/videos"
                 className={`${
                   location.pathname === "/videos"
-                    ? "text-[#FEC6A1]"
-                    : "text-[#403E43]"
-                } hover:text-[#FEC6A1] transition-colors`}
+                    ? "text-primary"
+                    : "text-secondary"
+                } hover:text-primary transition-colors`}
               >
                 Videos
               </Link>
