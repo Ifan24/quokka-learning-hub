@@ -1,5 +1,5 @@
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { VideoInfo } from "@/components/video/VideoInfo";
@@ -22,6 +22,21 @@ const Video = () => {
       videoRef.current.seekTo(time);
     }
   };
+
+  useEffect(() => {
+    // Configure the ElevenLabs widget when video and transcription are available
+    const widget = document.querySelector('elevenlabs-convai');
+    if (widget && video?.transcription_text) {
+      const overrideConfig = {
+        agent: {
+          prompt: {
+            prompt: `You are an AI assistant helping users understand a video. Here is the transcription of the video content: ${video.transcription_text}. Use this context to answer questions about the video content.`
+          }
+        }
+      };
+      widget.setAttribute('override-config', JSON.stringify(overrideConfig));
+    }
+  }, [video?.transcription_text]);
 
   if (loading) {
     return <LoadingState />;
@@ -50,6 +65,14 @@ const Video = () => {
           </div>
         </div>
       </div>
+
+      <elevenlabs-convai
+        agent-id="replace-with-your-agent-id"
+        action-text="Ask about this video"
+        start-call-text="Start conversation"
+        listening-text="Listening..."
+        speaking-text="AI Assistant speaking"
+      ></elevenlabs-convai>
     </div>
   );
 };
