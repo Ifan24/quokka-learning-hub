@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -18,6 +18,24 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    // Check if we're on an email confirmation flow
+    const token = searchParams.get("token");
+    const type = searchParams.get("type");
+
+    if (token && type) {
+      // Let Supabase handle the token verification
+      toast({
+        title: "Verifying your email...",
+        description: "Please wait while we confirm your account.",
+      });
+      
+      // The session will be automatically updated by Supabase
+      // and the AuthProvider will redirect to dashboard
+    }
+  }, [searchParams, toast]);
 
   useEffect(() => {
     if (user) {
