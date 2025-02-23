@@ -26,30 +26,26 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Generate description using OpenAI
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Generate description using Fal API
+    const response = await fetch('https://rest.fal.ai/fal/instant/anthropic/claude-3.5-sonnet', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Key ${Deno.env.get('FAL_API_KEY')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant that generates concise video descriptions based on transcripts. Keep descriptions under 200 words and focus on key points.'
-          },
-          {
-            role: 'user',
-            content: `Generate a clear and concise description for a video based on this transcript: ${transcriptionText}`
-          }
-        ],
+        input: {
+          prompt: `You are a helpful assistant that generates concise video descriptions based on transcripts. Keep descriptions under 200 words and focus on key points.
+
+Generate a clear and concise description for a video based on this transcript:
+
+${transcriptionText}`
+        }
       }),
     })
 
     const data = await response.json()
-    const generatedDescription = data.choices[0].message.content
+    const generatedDescription = data.response
 
     // Update video description in the database
     const { error: updateError } = await supabaseClient
