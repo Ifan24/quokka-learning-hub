@@ -8,20 +8,26 @@ interface QuizQuestionProps {
   selectedAnswer: number | null;
   onAnswerSelect: (choiceIndex: number) => void;
   onSeek: (time: number) => void;
+  currentQuestionIndex: number;
+  totalQuestions: number;
 }
 
 export const QuizQuestion = ({
   question,
   selectedAnswer,
   onAnswerSelect,
-  onSeek
+  onSeek,
+  currentQuestionIndex,
+  totalQuestions
 }: QuizQuestionProps) => {
   const isAnswerRevealed = selectedAnswer !== null;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium text-lg text-left break-words">{question.question}</h3>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-sm text-muted-foreground">
+          Question {currentQuestionIndex + 1} of {totalQuestions}
+        </div>
         <Button
           variant="ghost"
           size="sm"
@@ -33,6 +39,10 @@ export const QuizQuestion = ({
           {Math.floor(question.timestamp % 60).toString().padStart(2, '0')}
         </Button>
       </div>
+
+      <h3 className="font-medium text-lg text-left break-words">
+        {question.question}
+      </h3>
 
       <div className="grid grid-cols-1 gap-2">
         {question.choices.map((choice, idx) => (

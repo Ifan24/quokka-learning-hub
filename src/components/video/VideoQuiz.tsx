@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -289,6 +288,8 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
               selectedAnswer={selectedAnswer}
               onAnswerSelect={handleAnswerSelect}
               onSeek={onSeek}
+              currentQuestionIndex={currentQuestionIndex}
+              totalQuestions={quizzes[currentQuizIndex].questions.length}
             />
             <QuizControls
               currentQuestionIndex={currentQuestionIndex}
