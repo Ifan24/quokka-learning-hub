@@ -36,7 +36,7 @@ const Video = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container px-4 py-8">
-        <div className="mb-6">
+        <div className="mb-6 text-left">
           <Link to="/dashboard">
             <Button variant="outline">
               <ChevronLeft className="w-4 h-4 mr-2" />
