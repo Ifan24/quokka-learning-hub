@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Video from "./pages/Video";
 import Videos from "./pages/Videos";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import "./App.css";
 import { useAuth } from "./components/AuthProvider";
@@ -35,7 +36,7 @@ function App() {
               path="/dashboard" 
               element={
                 <PrivateRoute>
-                  <Videos />
+                  <Dashboard />
                 </PrivateRoute>
               } 
             />
