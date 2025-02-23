@@ -21,7 +21,7 @@ export const QuizQuestion = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium text-lg break-words">{question.question}</h3>
+        <h3 className="font-medium text-lg text-left break-words">{question.question}</h3>
         <Button
           variant="ghost"
           size="sm"
@@ -30,7 +30,7 @@ export const QuizQuestion = ({
         >
           <Play className="w-4 h-4 mr-1" />
           {Math.floor(question.timestamp / 60)}:
-          {Math.floor(question.timestamp % 60).toString().padStart(2, "0")}
+          {Math.floor(question.timestamp % 60).toString().padStart(2, '0')}
         </Button>
       </div>
 
