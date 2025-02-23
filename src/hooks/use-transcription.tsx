@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import type { VideoDetails } from "@/types/video";
+import type { VideoDetails, TranscriptionChunk } from "@/types/video";
 
 export const useTranscription = (video: VideoDetails | null, onTranscriptionComplete: (updatedVideo: VideoDetails) => void) => {
   const [isTranscribing, setIsTranscribing] = useState(false);
