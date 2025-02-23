@@ -2,6 +2,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "./AuthProvider";
+import { Settings } from "lucide-react";
 
 const Navigation = () => {
   const { user, signOut } = useAuth();
@@ -35,6 +36,17 @@ const Navigation = () => {
                 } hover:text-primary transition-colors`}
               >
                 Videos
+              </Link>
+              <Link
+                to="/settings"
+                className={`${
+                  location.pathname === "/settings"
+                    ? "text-primary"
+                    : "text-secondary"
+                } hover:text-primary transition-colors flex items-center gap-1`}
+              >
+                <Settings className="w-4 h-4" />
+                Settings
               </Link>
             </div>
           )}
