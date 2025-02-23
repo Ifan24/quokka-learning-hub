@@ -16,11 +16,9 @@ serve(async (req) => {
 
   try {
     const { videoId, transcriptionText } = await req.json()
-    console.log('Received request with:', { videoId, transcriptionText })
 
     if (!videoId || !transcriptionText) {
-      console.error('Missing parameters:', { videoId, transcriptionText })
-      throw new Error('Missing required parameters: videoId and transcriptionText are required')
+      throw new Error('Missing required parameters')
     }
 
     // Initialize FAL client

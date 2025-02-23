@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wand2, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Wand2, ChevronDown, ChevronUp } from "lucide-react";
 import type { VideoDetails, TranscriptionChunk } from "@/types/video";
 
 interface TranscriptionProps {
@@ -74,29 +74,16 @@ export const Transcription = ({
     return null;
   };
 
-  const showTranscribeButton = !video.transcription_chunks || 
-    video.transcription_status === 'failed' || 
-    !video.transcription_status;
-
   return (
     <Card className="p-4 py-1 text-left">
-      {showTranscribeButton && (
+      {video?.transcription_status !== 'completed' && (
         <Button 
           onClick={onTranscribe} 
           disabled={isTranscribing || video?.transcription_status === 'processing'} 
           className="w-full"
         >
-          {(isTranscribing || video?.transcription_status === 'processing') ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Transcribing...
-            </>
-          ) : (
-            <>
-              <Wand2 className="w-4 h-4 mr-2" />
-              {video.transcription_status === 'failed' ? 'Retry Transcription' : 'Generate Transcription'}
-            </>
-          )}
+          <Wand2 className="w-4 h-4 mr-2" />
+          {video?.transcription_status === 'processing' || isTranscribing ? 'Transcribing...' : 'Generate Transcription'}
         </Button>
       )}
       {renderTranscriptionContent()}
