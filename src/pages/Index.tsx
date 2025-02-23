@@ -1,134 +1,158 @@
 
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, MessageCircle, FileText, Video, ArrowRight } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import StatsCard from "@/components/StatsCard";
-import { useAuth } from "@/components/AuthProvider";
+import VideoCard from "@/components/VideoCard";
+import { Clock, Film, Upload, User } from "lucide-react";
+import { VideoUploadDialog } from "@/components/VideoUploadDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+
+interface Video {
+  id: string;
+  title: string;
+  description: string;
+  duration: string;
+  views: number;
+  thumbnail_url?: string;
+  file_path: string;
+  created_at: string;
+  is_public: boolean;
+  user_id: string;
+}
 
 const Index = () => {
-  const { user } = useAuth();
-  
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const fetchVideos = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("videos")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setVideos(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error fetching videos",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVideos();
+  }, []);
+
+  const handleDelete = () => {
+    fetchVideos();
+  };
+
+  const handleUpdate = () => {
+    fetchVideos();
+  };
+
+  const handleUploadComplete = () => {
+    fetchVideos();
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section className="py-20 md:py-28">
-        <div className="container px-4 mx-auto">
-          <div className="flex flex-col md:flex-row items-center gap-12">
-            <div className="flex-1 text-left space-y-6">
-              <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-                Learn Smarter with{" "}
-                <span className="text-primary">AI-Powered Video Insights</span>
-              </h1>
-              <p className="text-xl text-muted-foreground">
-                Quokka helps you learn efficiently with AI-generated quizzes,
-                transcriptions, and interactive discussions.
-              </p>
-              <div className="flex gap-4">
-                <Link to={user ? "/dashboard" : "/auth"}>
-                  <Button size="lg" className="gap-2">
-                    Get Started
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            <div className="flex-1">
-              <img
-                src="/placeholder.svg"
-                alt="Platform Preview"
-                className="w-full h-auto rounded-lg shadow-lg"
+      <main className="container px-4 py-8">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">My Learning Space</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage your private video content and learning materials
+            </p>
+          </div>
+          <div className="flex w-full md:w-auto items-center gap-4">
+            <Input
+              placeholder="Search in my videos..."
+              className="max-w-sm"
+            />
+            <VideoUploadDialog onUploadComplete={handleUploadComplete}>
+              <Button variant="default" className="inline-flex whitespace-nowrap shrink-0 bg-primary hover:bg-primary/90 text-white">
+                <Upload className="w-4 h-4" />
+                <span className="ml-2">Upload New Video</span>
+              </Button>
+            </VideoUploadDialog>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatsCard
+            icon={<Film className="w-5 h-5" />}
+            title="My Videos"
+            value={videos.length.toString()}
+            subtitle="Total uploaded videos"
+          />
+          <StatsCard
+            icon={<Clock className="w-5 h-5" />}
+            title="Learning Time"
+            value={`${Math.floor(videos.length * 0.75)} hours`}
+            subtitle="Total video content duration"
+          />
+          <StatsCard
+            icon={<User className="w-5 h-5" />}
+            title="Completed"
+            value="75%"
+            subtitle="Videos watched completion rate"
+          />
+          <StatsCard
+            icon={<Upload className="w-5 h-5" />}
+            title="Last Upload"
+            value={videos.length > 0 ? new Date(videos[0].created_at).toLocaleDateString() : "No uploads"}
+            subtitle="Latest content update"
+          />
+        </div>
+
+        <h2 className="text-2xl font-semibold mb-4">My Videos</h2>
+        {loading ? (
+          <div className="text-center text-muted-foreground py-8">Loading...</div>
+        ) : videos.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {videos.map((video) => (
+              <VideoCard
+                key={video.id}
+                id={video.id}
+                title={video.title}
+                duration={video.duration}
+                views={video.views || 0}
+                description={video.description || ""}
+                thumbnail={video.thumbnail_url}
+                filePath={video.file_path}
+                isPublic={video.is_public}
+                userId={video.user_id}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
               />
-            </div>
+            ))}
           </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20 bg-muted/50">
-        <div className="container px-4 mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">Core Features</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="p-6">
-              <BrainCircuit className="w-12 h-12 text-primary mb-4" />
-              <h3 className="text-xl font-semibold mb-2">AI Quiz Generator</h3>
-              <p className="text-muted-foreground">
-                Generate multiple-choice questions with answers and timestamps.
-              </p>
-            </Card>
-            <Card className="p-6">
-              <MessageCircle className="w-12 h-12 text-primary mb-4" />
-              <h3 className="text-xl font-semibold mb-2">AI Chat Assistant</h3>
-              <p className="text-muted-foreground">
-                Ask questions about video content and get instant AI-powered answers.
-              </p>
-            </Card>
-            <Card className="p-6">
-              <FileText className="w-12 h-12 text-primary mb-4" />
-              <h3 className="text-xl font-semibold mb-2">
-                Transcriptions & Summaries
-              </h3>
-              <p className="text-muted-foreground">
-                Automatically generate video transcriptions for easy reference.
-              </p>
-            </Card>
-            <Card className="p-6">
-              <Video className="w-12 h-12 text-primary mb-4" />
-              <h3 className="text-xl font-semibold mb-2">
-                Seamless Video Management
-              </h3>
-              <p className="text-muted-foreground">
-                Upload, organize, and publish videos effortlessly.
-              </p>
-            </Card>
+        ) : (
+          <div className="text-center text-muted-foreground py-8">
+            No videos uploaded yet. Click the &quot;Upload New Video&quot; button to get started.
           </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-20">
-        <div className="container px-4 mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatsCard
-              icon={<Video className="w-6 h-6" />}
-              title="Total Videos"
-              value="1,000+"
-              subtitle="Videos uploaded"
-            />
-            <StatsCard
-              icon={<BrainCircuit className="w-6 h-6" />}
-              title="AI Interactions"
-              value="50,000+"
-              subtitle="Questions answered"
-            />
-            <StatsCard
-              icon={<FileText className="w-6 h-6" />}
-              title="Learning Hours"
-              value="10,000+"
-              subtitle="Hours of content"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-muted/50">
-        <div className="container px-4 mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-6">
-            Start Your AI-Powered Learning Journey Today!
-          </h2>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join thousands of learners who are already experiencing the power of
-            AI-enhanced video learning.
-          </p>
-          <Link to={user ? "/dashboard" : "/auth"}>
-            <Button size="lg" className="gap-2">
-              Get Started
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
-        </div>
-      </section>
+        )}
+      </main>
     </div>
   );
 };
