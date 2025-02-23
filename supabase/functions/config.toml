@@ -1,2 +1,6 @@
 
 project_id = "bclvquqynectsarfouvp"
+[functions.transcribe-video]
+verify_jwt = false
+[functions.chat-with-video]
+verify_jwt = false
