@@ -22,8 +22,6 @@ interface QuizNavigationProps {
 export const QuizNavigation = ({
   quizzes,
   currentQuizIndex,
-  currentQuestionIndex,
-  totalQuestions,
   isDeleting,
   onPreviousQuiz,
   onNextQuiz,
@@ -65,9 +63,6 @@ export const QuizNavigation = ({
               <Trash2 className="h-4 w-4" />
             )}
           </Button>
-        </div>
-        <div className="text-sm text-muted-foreground whitespace-nowrap">
-          Question {currentQuestionIndex + 1} of {totalQuestions}
         </div>
       </div>
     </div>
