@@ -50,13 +50,21 @@ export const useTranscription = (video: VideoDetails | null, onTranscriptionComp
           
           onTranscriptionComplete(parsedVideo);
           
-          if (updatedVideo.transcription_status === 'completed') {
+          if (updatedVideo.transcription_status === 'completed' && updatedVideo.transcription_text) {
             clearInterval(interval);
             toast({
               title: "Transcription completed",
               description: "The video transcription is now available.",
             });
             setIsTranscribing(false);
+
+            // Generate description after transcription is complete
+            await supabase.functions.invoke('generate-description', {
+              body: {
+                videoId: video.id,
+                transcriptionText: updatedVideo.transcription_text
+              }
+            });
           } else if (updatedVideo.transcription_status === 'failed') {
             clearInterval(interval);
             toast({

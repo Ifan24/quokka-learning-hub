@@ -4,3 +4,6 @@ project_id = "bclvquqynectsarfouvp"
 verify_jwt = false
 [functions.chat-with-video]
 verify_jwt = false
+[functions.generate-description]
+verify_jwt = false
+
