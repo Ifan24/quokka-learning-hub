@@ -34,7 +34,7 @@ const Index = () => {
             </div>
             <div className="flex-1">
               <img
-                src="https://images.unsplash.com/photo-1518770660439-4636190af475"
+                src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc"
                 alt="Platform Preview"
                 className="w-full h-auto rounded-lg shadow-lg object-cover"
               />
