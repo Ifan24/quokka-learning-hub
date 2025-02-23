@@ -17,9 +17,9 @@ export const AIFeatures = ({ video, onSeek }: AIFeaturesProps) => {
 
   return (
     <Card className="h-full">
-      <CardHeader>
-        <div className="flex items-center justify-between mb-2">
-          <CardTitle>AI Features</CardTitle>
+      <CardHeader className="p-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">AI Features</CardTitle>
           <ToggleGroup
             type="single"
             value={activeTab}
