@@ -9,6 +9,56 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      code_usage: {
+        Row: {
+          code: string | null
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "code_usage_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "redeem_codes"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      credits: {
+        Row: {
+          amount: number
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -61,6 +111,90 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      redeem_codes: {
+        Row: {
+          code: string
+          created_at: string
+          credit_amount: number
+          is_used: boolean | null
+          max_uses: number | null
+          total_uses: number | null
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          credit_amount: number
+          is_used?: boolean | null
+          max_uses?: number | null
+          total_uses?: number | null
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          credit_amount?: number
+          is_used?: boolean | null
+          max_uses?: number | null
+          total_uses?: number | null
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          cancel_at: string | null
+          cancel_at_period_end: boolean | null
+          canceled_at: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          price_id: string | null
+          quantity: number | null
+          status: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancel_at?: string | null
+          cancel_at_period_end?: boolean | null
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          price_id?: string | null
+          quantity?: number | null
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancel_at?: string | null
+          cancel_at_period_end?: boolean | null
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          price_id?: string | null
+          quantity?: number | null
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       videos: {
         Row: {
@@ -127,6 +261,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_credits: {
+        Args: {
+          user_id_input: string
+          amount_to_add: number
+        }
+        Returns: undefined
+      }
       get_current_user_profile: {
         Args: Record<PropertyKey, never>
         Returns: {
