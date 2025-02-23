@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
@@ -27,7 +28,8 @@ import { Loader2 } from "lucide-react";
 export default function Video() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { videoId } = useParams();
+  const params = useParams<{ videoId: string }>();
+  const videoId = params.videoId;
   const [video, setVideo] = useState<any>(null);
   const [transcription, setTranscription] = useState<string | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -37,6 +39,7 @@ export default function Video() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("Component mounted, videoId:", videoId);
     const fetchVideo = async () => {
       if (!videoId) {
         console.error("No videoId provided");
@@ -59,7 +62,7 @@ export default function Video() {
           .from("videos")
           .select("*")
           .eq("id", videoId)
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error("Supabase error fetching video:", error);
