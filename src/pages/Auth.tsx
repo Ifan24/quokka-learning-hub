@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import Navigation from "@/components/Navigation";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -74,7 +73,6 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       <main className="container max-w-md px-4 py-16">
         <Card>
           <CardHeader>
