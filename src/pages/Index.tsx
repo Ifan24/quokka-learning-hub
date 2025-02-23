@@ -34,9 +34,9 @@ const Index = () => {
             </div>
             <div className="flex-1">
               <img
-                src="https://images.unsplash.com/photo-1518770660439-4636190af475"
-                alt="Platform Preview"
-                className="w-full h-auto rounded-lg shadow-lg object-cover"
+                src="/lovable-uploads/d94e341b-9b89-4d2d-89a3-d71e9b62c3e2.png"
+                alt="Quokka learning illustration"
+                className="w-full h-auto rounded-lg shadow-lg"
               />
             </div>
           </div>
