@@ -42,7 +42,7 @@ export const ResetPasswordForm = ({ onBackToLogin }: ResetPasswordFormProps) => 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium text-secondary">
+        <label htmlFor="email" className="text-sm font-medium text-[#403E43]">
           Email
         </label>
         <Input
@@ -53,7 +53,7 @@ export const ResetPasswordForm = ({ onBackToLogin }: ResetPasswordFormProps) => 
           required
         />
       </div>
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button type="submit" className="w-full bg-[#FEC6A1] hover:bg-[#FDB68F] text-[#403E43]" disabled={isLoading}>
         {isLoading ? "Loading..." : "Send Reset Link"}
       </Button>
       
@@ -62,7 +62,7 @@ export const ResetPasswordForm = ({ onBackToLogin }: ResetPasswordFormProps) => 
         <button
           type="button"
           onClick={onBackToLogin}
-          className="text-primary hover:underline"
+          className="text-[#FEC6A1] hover:underline"
         >
           Sign in
         </button>

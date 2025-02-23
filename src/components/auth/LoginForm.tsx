@@ -43,7 +43,7 @@ export const LoginForm = ({ onToggleMode, onForgotPassword }: LoginFormProps) =>
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium text-secondary">
+        <label htmlFor="email" className="text-sm font-medium text-[#403E43]">
           Email
         </label>
         <Input
@@ -55,7 +55,7 @@ export const LoginForm = ({ onToggleMode, onForgotPassword }: LoginFormProps) =>
         />
       </div>
       <div className="space-y-2">
-        <label htmlFor="password" className="text-sm font-medium text-secondary">
+        <label htmlFor="password" className="text-sm font-medium text-[#403E43]">
           Password
         </label>
         <Input
@@ -67,7 +67,7 @@ export const LoginForm = ({ onToggleMode, onForgotPassword }: LoginFormProps) =>
           minLength={6}
         />
       </div>
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button type="submit" className="w-full bg-[#FEC6A1] hover:bg-[#FDB68F] text-[#403E43]" disabled={isLoading}>
         {isLoading ? "Loading..." : "Sign In"}
       </Button>
       
@@ -76,7 +76,7 @@ export const LoginForm = ({ onToggleMode, onForgotPassword }: LoginFormProps) =>
         <button
           type="button"
           onClick={onToggleMode}
-          className="text-primary hover:underline"
+          className="text-[#FEC6A1] hover:underline"
         >
           Sign Up
         </button>
@@ -87,7 +87,7 @@ export const LoginForm = ({ onToggleMode, onForgotPassword }: LoginFormProps) =>
         <button
           type="button"
           onClick={onForgotPassword}
-          className="text-primary hover:underline"
+          className="text-[#FEC6A1] hover:underline"
         >
           Reset it here
         </button>
