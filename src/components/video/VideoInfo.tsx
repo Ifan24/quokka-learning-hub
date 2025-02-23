@@ -10,9 +10,10 @@ import type { VideoDetails } from "@/types/video";
 
 interface VideoInfoProps {
   video: VideoDetails;
+  onUpdate: (updatedVideo: VideoDetails) => void;
 }
 
-export const VideoInfo = ({ video }: VideoInfoProps) => {
+export const VideoInfo = ({ video, onUpdate }: VideoInfoProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
@@ -36,6 +37,17 @@ export const VideoInfo = ({ video }: VideoInfoProps) => {
       });
 
       if (error) throw error;
+
+      // Fetch updated video details
+      const { data: updatedVideo, error: fetchError } = await supabase
+        .from("videos")
+        .select("*")
+        .eq("id", video.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      onUpdate(updatedVideo);
 
       toast({
         title: "Success",
