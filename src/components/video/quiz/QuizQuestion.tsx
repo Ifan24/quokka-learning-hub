@@ -1,6 +1,9 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Check, X } from "lucide-react";
+import { Play, Check, X, Volume2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import type { QuizQuestion as QuizQuestionType } from "@/types/quiz";
 
 interface QuizQuestionProps {
@@ -21,6 +24,56 @@ export const QuizQuestion = ({
   totalQuestions
 }: QuizQuestionProps) => {
   const isAnswerRevealed = selectedAnswer !== null;
+  const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+
+  const generateAndPlaySpeech = async () => {
+    if (isGenerating) return;
+
+    try {
+      setIsGenerating(true);
+      
+      // Stop any currently playing audio
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+      }
+
+      const { data, error } = await supabase.functions.invoke('text-to-speech', {
+        body: { text: question.question }
+      });
+
+      if (error) throw error;
+      if (!data?.audioContent) throw new Error('No audio content received');
+
+      // Create and play audio
+      const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
+      audio.onended = () => {
+        setIsGenerating(false);
+      };
+      audio.onerror = () => {
+        setIsGenerating(false);
+        toast({
+          title: "Error",
+          description: "Failed to play audio",
+          variant: "destructive"
+        });
+      };
+      
+      setAudioElement(audio);
+      await audio.play();
+      
+    } catch (error: any) {
+      console.error('Speech generation error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate speech",
+        variant: "destructive"
+      });
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -28,16 +81,31 @@ export const QuizQuestion = ({
         <div className="text-sm text-muted-foreground">
           Question {currentQuestionIndex + 1} of {totalQuestions}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onSeek(question.timestamp)}
-          className="whitespace-nowrap"
-        >
-          <Play className="w-4 h-4 mr-1" />
-          {Math.floor(question.timestamp / 60)}:
-          {Math.floor(question.timestamp % 60).toString().padStart(2, '0')}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={generateAndPlaySpeech}
+            disabled={isGenerating}
+            className="whitespace-nowrap"
+          >
+            {isGenerating ? (
+              <div className="animate-spin h-4 w-4">◌</div>
+            ) : (
+              <Volume2 className="w-4 h-4" />
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onSeek(question.timestamp)}
+            className="whitespace-nowrap"
+          >
+            <Play className="w-4 h-4 mr-1" />
+            {Math.floor(question.timestamp / 60)}:
+            {Math.floor(question.timestamp % 60).toString().padStart(2, '0')}
+          </Button>
+        </div>
       </div>
 
       <h3 className="font-medium text-lg text-left break-words">
