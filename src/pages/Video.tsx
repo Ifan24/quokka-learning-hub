@@ -1,8 +1,6 @@
 
 import { useRef } from "react";
-import { useParams, Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft } from "lucide-react";
+import { useParams } from "react-router-dom";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { VideoInfo } from "@/components/video/VideoInfo";
 import { Transcription } from "@/components/video/Transcription";
@@ -36,15 +34,6 @@ const Video = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container px-4 py-8">
-        <div className="mb-6 text-left">
-          <Link to="/dashboard">
-            <Button variant="outline">
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
-            </Button>
-          </Link>
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8 space-y-6">
             <VideoPlayer url={videoUrl} ref={videoRef} />
