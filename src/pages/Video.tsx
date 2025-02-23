@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,8 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { VideoInfo } from "@/components/video/VideoInfo";
 import { Transcription } from "@/components/video/Transcription";
-import { VideoChat } from "@/components/video/VideoChat";
-import { VideoQuiz } from "@/components/video/VideoQuiz";
+import { AIFeatures } from "@/components/video/AIFeatures";
 import type { VideoDetails, TranscriptionChunk } from "@/types/video";
 import ReactPlayer from "react-player";
 
@@ -196,7 +194,7 @@ const Video = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 space-y-6">
             <VideoPlayer url={videoUrl} ref={videoRef} />
             <VideoInfo video={video} />
           </div>
@@ -207,8 +205,7 @@ const Video = () => {
               isTranscribing={isTranscribing}
               onTranscribe={startTranscription}
             />
-            <VideoQuiz video={video} onSeek={handleSeek} />
-            <VideoChat video={video} />
+            <AIFeatures video={video} onSeek={handleSeek} />
           </div>
         </div>
       </div>
