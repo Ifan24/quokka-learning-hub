@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Check, X, Volume2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,9 @@ interface QuizQuestionProps {
   currentQuestionIndex: number;
   totalQuestions: number;
 }
+
+// Cache for storing generated audio URLs
+const audioCache = new Map<string, string>();
 
 export const QuizQuestion = ({
   question,
@@ -40,21 +43,35 @@ export const QuizQuestion = ({
         audioElement.currentTime = 0;
       }
 
-      const { data, error } = await supabase.functions.invoke('text-to-speech', {
-        body: { text: question.question }
-      });
+      // Check if we have cached audio for this question
+      const cachedAudioUrl = audioCache.get(question.question);
+      let audioUrl: string;
 
-      if (error) {
-        throw error;
-      }
+      if (cachedAudioUrl) {
+        console.log('Using cached audio');
+        audioUrl = cachedAudioUrl;
+      } else {
+        console.log('Generating new audio');
+        const { data, error } = await supabase.functions.invoke('text-to-speech', {
+          body: { text: question.question }
+        });
 
-      if (!data?.audioContent) {
-        console.error('Response data:', data);
-        throw new Error('No audio content received from server');
+        if (error) {
+          throw error;
+        }
+
+        if (!data?.audioContent) {
+          console.error('Response data:', data);
+          throw new Error('No audio content received from server');
+        }
+
+        audioUrl = `data:audio/mp3;base64,${data.audioContent}`;
+        // Cache the audio URL
+        audioCache.set(question.question, audioUrl);
       }
 
       // Create and play audio
-      const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
+      const audio = new Audio(audioUrl);
       
       audio.onerror = (e) => {
         console.error('Audio error:', e);
