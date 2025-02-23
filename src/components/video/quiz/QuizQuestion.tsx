@@ -44,15 +44,20 @@ export const QuizQuestion = ({
         body: { text: question.question }
       });
 
-      if (error) throw error;
-      if (!data?.audioContent) throw new Error('No audio content received');
+      if (error) {
+        throw error;
+      }
+
+      if (!data?.audioContent) {
+        console.error('Response data:', data);
+        throw new Error('No audio content received from server');
+      }
 
       // Create and play audio
       const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
-      audio.onended = () => {
-        setIsGenerating(false);
-      };
-      audio.onerror = () => {
+      
+      audio.onerror = (e) => {
+        console.error('Audio error:', e);
         setIsGenerating(false);
         toast({
           title: "Error",
@@ -60,9 +65,26 @@ export const QuizQuestion = ({
           variant: "destructive"
         });
       };
+
+      audio.oncanplay = async () => {
+        try {
+          await audio.play();
+        } catch (playError) {
+          console.error('Play error:', playError);
+          setIsGenerating(false);
+          toast({
+            title: "Error",
+            description: "Failed to play audio",
+            variant: "destructive"
+          });
+        }
+      };
+      
+      audio.onended = () => {
+        setIsGenerating(false);
+      };
       
       setAudioElement(audio);
-      await audio.play();
       
     } catch (error: any) {
       console.error('Speech generation error:', error);
