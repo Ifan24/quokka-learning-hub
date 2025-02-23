@@ -1,5 +1,6 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { ElevenLabsClient } from 'npm:elevenlabs@0.1.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,6 +8,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -18,30 +20,30 @@ serve(async (req) => {
       throw new Error('Text is required')
     }
 
-    const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM', {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'Content-Type': 'application/json',
-        'xi-api-key': Deno.env.get('ELEVEN_LABS_API_KEY') || '',
-      },
-      body: JSON.stringify({
-        text,
-        model_id: "eleven_multilingual_v2",
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.5,
-        }
-      }),
+    console.log('Generating speech for text:', text)
+
+    const client = new ElevenLabsClient({
+      apiKey: Deno.env.get('ELEVEN_LABS_API_KEY') || ''
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail?.message || 'Failed to generate speech')
+    const response = await client.textToSpeech.convert(
+      "JBFqnCBsd6RMkjVDRZzb", // George voice
+      {
+        output_format: "mp3_44100_128",
+        text: text,
+        model_id: "eleven_multilingual_v2"
+      }
+    )
+
+    if (!response) {
+      throw new Error('Failed to generate speech')
     }
 
-    const arrayBuffer = await response.arrayBuffer()
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+    // Convert ArrayBuffer to base64
+    const buffer = await response.arrayBuffer()
+    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(buffer)))
+
+    console.log('Successfully generated speech')
 
     return new Response(
       JSON.stringify({ audioContent: base64Audio }),
@@ -50,6 +52,7 @@ serve(async (req) => {
       },
     )
   } catch (error) {
+    console.error('Error generating speech:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
