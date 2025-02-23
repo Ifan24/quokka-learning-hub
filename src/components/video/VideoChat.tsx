@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/AuthProvider";
@@ -6,15 +7,17 @@ import { checkAndDeductCredits } from "@/utils/credits";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Send } from "lucide-react";
-import { useEffect } from "react";
+
+interface ChatMessage {
+  content: string;
+  isUser: boolean;
+}
 
 export function VideoChat({ videoId }: { videoId: string }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<
-    { content: string; isUser: boolean }[]
-  >([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -35,7 +38,7 @@ export function VideoChat({ videoId }: { videoId: string }) {
             variant: "destructive",
           });
         } else {
-          setMessages(data as { content: string; isUser: boolean }[]);
+          setMessages(data as ChatMessage[]);
         }
       } finally {
         setIsLoading(false);
@@ -55,7 +58,10 @@ export function VideoChat({ videoId }: { videoId: string }) {
           filter: `video_id=eq.${videoId}`,
         },
         (payload) => {
-          const newMessage = payload.new as { content: string; isUser: boolean };
+          const newMessage = {
+            content: payload.new.content,
+            isUser: payload.new.isUser,
+          };
           setMessages((prevMessages) => [...prevMessages, newMessage]);
         }
       )
@@ -105,15 +111,17 @@ export function VideoChat({ videoId }: { videoId: string }) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-grow space-y-4 p-4 overflow-y-auto">
-        {isLoading ? (
+        {isLoading && messages.length === 0 ? (
           <div>Loading messages...</div>
         ) : (
           messages.map((msg, index) => (
             <div
               key={index}
-              className={`chat-bubble ${
-                msg.isUser ? "user-message" : "ai-message"
-              }`}
+              className={`p-2 rounded-lg ${
+                msg.isUser 
+                  ? "bg-primary text-primary-foreground ml-auto" 
+                  : "bg-muted"
+              } max-w-[80%] ${msg.isUser ? "ml-auto" : "mr-auto"}`}
             >
               {msg.content}
             </div>
