@@ -35,7 +35,7 @@ export const Transcription = ({ video, isTranscribing, onTranscribe }: Transcrip
             </Button>
           </div>
           {isExpanded && (
-            <div className="max-h-[300px] overflow-y-auto space-y-2">
+            <div className="max-h-[150px] overflow-y-auto space-y-2">
               {video.transcription_chunks.map((chunk: TranscriptionChunk, index: number) => (
                 <div 
                   key={index}
