@@ -1,6 +1,6 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { ElevenLabsClient } from 'npm:elevenlabs@0.1.0'
+import { ElevenLabsClient } from "elevenlabs"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,38 +25,17 @@ serve(async (req) => {
       throw new Error('ElevenLabs API key is not configured')
     }
 
-    // Remove any whitespace from the API key
-    const cleanApiKey = apiKey.trim()
-    
     console.log('Generating speech for text:', text)
-    console.log('API Key starts with:', cleanApiKey.substring(0, 4)) // Log first few chars to verify format
-
-    // Direct API call to test the key
-    const testResponse = await fetch('https://api.elevenlabs.io/v1/voices', {
-      headers: {
-        'Accept': 'application/json',
-        'xi-api-key': cleanApiKey
-      }
-    })
-
-    if (!testResponse.ok) {
-      const error = await testResponse.text()
-      console.error('API Key validation failed:', error)
-      throw new Error('Invalid API key')
-    }
 
     const client = new ElevenLabsClient({
-      apiKey: cleanApiKey
+      apiKey: apiKey
     })
 
-    const response = await client.textToSpeech.convert(
-      "JBFqnCBsd6RMkjVDRZzb", // George voice
-      {
-        output_format: "mp3_44100_128",
-        text: text,
-        model_id: "eleven_multilingual_v2"
-      }
-    )
+    const response = await client.textToSpeech.convert("JBFqnCBsd6RMkjVDRZzb", {
+      output_format: "mp3_44100_128",
+      text: text,
+      model_id: "eleven_multilingual_v2"
+    })
 
     if (!response) {
       throw new Error('Failed to generate speech')
