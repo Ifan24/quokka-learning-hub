@@ -58,7 +58,7 @@ export const VideoInfo = ({ video }: VideoInfoProps) => {
   };
 
   return (
-    <>
+    <div className="text-left">
       <h1 className="text-2xl font-bold mb-2">{video.title}</h1>
       
       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
@@ -90,11 +90,11 @@ export const VideoInfo = ({ video }: VideoInfoProps) => {
               </Button>
             )}
           </div>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap text-left">
             {video.description || "No description provided"}
           </p>
         </div>
       </Card>
-    </>
+    </div>
   );
 };
