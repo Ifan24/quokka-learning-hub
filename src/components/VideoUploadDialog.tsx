@@ -115,11 +115,8 @@ export function VideoUploadDialog({ onUploadComplete, children }: VideoUploadDia
       });
       return;
     }
-    const {
-      data: {
-        user
-      }
-    } = await supabase.auth.getUser();
+
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast({
         title: "Authentication required",
@@ -128,6 +125,7 @@ export function VideoUploadDialog({ onUploadComplete, children }: VideoUploadDia
       });
       return;
     }
+
     setUploading(true);
     setUploadProgress(0);
     try {
@@ -138,43 +136,60 @@ export function VideoUploadDialog({ onUploadComplete, children }: VideoUploadDia
       const videoExt = file.name.split(".").pop();
       const videoFileName = `${crypto.randomUUID()}.${videoExt}`;
       setUploadProgress(40);
-      const {
-        error: uploadError
-      } = await supabase.storage.from("videos").upload(videoFileName, file, {
-        cacheControl: "3600",
-        upsert: false
-      });
+      const { error: uploadError } = await supabase.storage
+        .from("videos")
+        .upload(videoFileName, file, {
+          cacheControl: "3600",
+          upsert: false
+        });
       if (uploadError) throw uploadError;
       setUploadProgress(70);
       const thumbnailFileName = `${crypto.randomUUID()}.jpg`;
-      const {
-        error: thumbnailUploadError
-      } = await supabase.storage.from("thumbnails").upload(thumbnailFileName, thumbnailBlob);
+      const { error: thumbnailUploadError } = await supabase.storage
+        .from("thumbnails")
+        .upload(thumbnailFileName, thumbnailBlob);
       if (thumbnailUploadError) throw thumbnailUploadError;
       setUploadProgress(85);
-      const {
-        data: {
-          publicUrl: thumbnailUrl
-        }
-      } = supabase.storage.from("thumbnails").getPublicUrl(thumbnailFileName);
+      const { data: { publicUrl: thumbnailUrl } } = supabase.storage
+        .from("thumbnails")
+        .getPublicUrl(thumbnailFileName);
       setUploadProgress(90);
-      const {
-        error: dbError
-      } = await supabase.from("videos").insert({
-        title,
-        description: description.trim() || null,
-        file_path: videoFileName,
-        thumbnail_url: thumbnailUrl,
-        size: file.size,
-        duration,
-        user_id: user.id,
-        total_parts: 1
-      });
+
+      const { data: videoData, error: dbError } = await supabase
+        .from("videos")
+        .insert({
+          title,
+          description: description.trim() || null,
+          file_path: videoFileName,
+          thumbnail_url: thumbnailUrl,
+          size: file.size,
+          duration,
+          user_id: user.id,
+          total_parts: 1,
+          transcription_status: 'processing'
+        })
+        .select()
+        .single();
+
       if (dbError) throw dbError;
+      setUploadProgress(95);
+
+      if (videoData) {
+        const { data: urlData } = await supabase.storage
+          .from("videos")
+          .createSignedUrl(videoFileName, 3600);
+
+        if (urlData?.signedUrl) {
+          await supabase.functions.invoke('transcribe-video', {
+            body: { videoId: videoData.id, signedUrl: urlData.signedUrl }
+          });
+        }
+      }
+
       setUploadProgress(100);
       toast({
         title: "Success",
-        description: "Video uploaded successfully"
+        description: "Video uploaded successfully and transcription started"
       });
       setOpen(false);
       onUploadComplete?.();

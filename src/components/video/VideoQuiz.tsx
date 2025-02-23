@@ -239,12 +239,24 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
           <h2 className="font-semibold">Quiz</h2>
           <Button
             onClick={generateQuiz}
-            disabled={isGenerating || !video.transcription_chunks}
+            disabled={isGenerating || !video.transcription_text}
+            title={
+              video.transcription_status === 'processing'
+                ? "Please wait while the video is being transcribed"
+                : !video.transcription_text
+                ? "Video needs to be transcribed before generating a quiz"
+                : "Generate a new quiz"
+            }
           >
             {isGenerating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Generating...
+              </>
+            ) : video.transcription_status === 'processing' ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Transcribing...
               </>
             ) : (
               <>
@@ -287,7 +299,11 @@ export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
           </>
         ) : (
           <p className="text-center text-muted-foreground text-sm">
-            Generate a quiz to test your knowledge of the video content
+            {video.transcription_status === 'processing'
+              ? "Video is being transcribed. Quiz generation will be available soon."
+              : !video.transcription_text
+              ? "Video needs to be transcribed before generating a quiz. Use the transcribe button above."
+              : "Generate a quiz to test your knowledge of the video content"}
           </p>
         )}
       </div>

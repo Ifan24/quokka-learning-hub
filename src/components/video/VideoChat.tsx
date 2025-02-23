@@ -86,7 +86,13 @@ export const VideoChat = ({ video }: VideoChatProps) => {
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question about the video..."
+            placeholder={
+              video.transcription_status === 'processing'
+                ? "Transcription in progress... Please wait."
+                : !video.transcription_text
+                ? "Video needs to be transcribed before you can chat about it"
+                : "Ask a question about the video..."
+            }
             className="min-h-[80px]"
             disabled={isLoading || !video.transcription_text}
           />
@@ -99,6 +105,16 @@ export const VideoChat = ({ video }: VideoChatProps) => {
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Processing...
+              </>
+            ) : video.transcription_status === 'processing' ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Transcribing Video...
+              </>
+            ) : !video.transcription_text ? (
+              <>
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Transcription Required
               </>
             ) : (
               <>
