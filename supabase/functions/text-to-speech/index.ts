@@ -20,11 +20,26 @@ serve(async (req) => {
       throw new Error('Text is required')
     }
 
+    const apiKey = Deno.env.get('ELEVEN_LABS_API_KEY')
+    if (!apiKey) {
+      throw new Error('ElevenLabs API key is not configured')
+    }
+
     console.log('Generating speech for text:', text)
+    console.log('API Key length:', apiKey.length) // Log the length to verify we have a key
 
     const client = new ElevenLabsClient({
-      apiKey: Deno.env.get('ELEVEN_LABS_API_KEY') || ''
+      apiKey: apiKey
     })
+
+    // First verify the API key is working by getting available voices
+    try {
+      const voices = await client.voices.getAll()
+      console.log('Successfully verified API key, found voices:', voices.length)
+    } catch (error) {
+      console.error('Failed to verify API key:', error)
+      throw new Error('Invalid API key or API key verification failed')
+    }
 
     const response = await client.textToSpeech.convert(
       "JBFqnCBsd6RMkjVDRZzb", // George voice
@@ -54,7 +69,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error generating speech:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.toString()
+      }),
       { 
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
