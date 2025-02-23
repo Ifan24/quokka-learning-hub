@@ -1,10 +1,14 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Wand2, Loader2, Play, ArrowLeft, ArrowRight, Check, X, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
+import { Wand2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { Quiz, QuizQuestion } from "@/types/quiz";
+import { QuizQuestion } from "./quiz/QuizQuestion";
+import { QuizNavigation } from "./quiz/QuizNavigation";
+import { QuizControls } from "./quiz/QuizControls";
+import type { Quiz, QuizQuestion as QuizQuestionType } from "@/types/quiz";
 import type { VideoDetails } from "@/types/video";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -15,10 +19,15 @@ interface VideoQuizProps {
 
 const validateQuizQuestion = (q: Json): boolean => {
   if (!q || typeof q !== 'object') return false;
-  return typeof (q as any).timestamp === 'number' && typeof (q as any).question === 'string' && Array.isArray((q as any).choices) && (q as any).choices.length === 4 && typeof (q as any).correctAnswer === 'number' && typeof (q as any).explanation === 'string';
+  return typeof (q as any).timestamp === 'number' && 
+         typeof (q as any).question === 'string' && 
+         Array.isArray((q as any).choices) && 
+         (q as any).choices.length === 4 && 
+         typeof (q as any).correctAnswer === 'number' && 
+         typeof (q as any).explanation === 'string';
 };
 
-const convertToQuizQuestion = (q: Json): QuizQuestion => {
+const convertToQuizQuestion = (q: Json): QuizQuestionType => {
   return {
     timestamp: (q as any).timestamp,
     question: (q as any).question,
@@ -28,10 +37,7 @@ const convertToQuizQuestion = (q: Json): QuizQuestion => {
   };
 };
 
-export const VideoQuiz = ({
-  video,
-  onSeek
-}: VideoQuizProps) => {
+export const VideoQuiz = ({ video, onSeek }: VideoQuizProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -226,112 +232,6 @@ export const VideoQuiz = ({
     }
   };
 
-  const renderCurrentQuestion = () => {
-    if (quizzes.length === 0) return null;
-
-    const currentQuiz = quizzes[currentQuizIndex];
-    const question = currentQuiz.questions[currentQuestionIndex];
-    const totalQuestions = currentQuiz.questions.length;
-    const isAnswerRevealed = selectedAnswer !== null;
-
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={previousQuiz}
-                disabled={currentQuizIndex === 0}
-              >
-                <ChevronUp className="h-4 w-4" />
-              </Button>
-              <div className="text-sm text-muted-foreground whitespace-nowrap">
-                Quiz {quizzes.length - currentQuizIndex} of {quizzes.length}
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={nextQuiz}
-                disabled={currentQuizIndex === quizzes.length - 1}
-              >
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={deleteQuiz}
-                disabled={isDeleting}
-                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              >
-                {isDeleting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            <div className="text-sm text-muted-foreground whitespace-nowrap">
-              Question {currentQuestionIndex + 1} of {totalQuestions}
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onSeek(question.timestamp)}
-            className="whitespace-nowrap"
-          >
-            <Play className="w-4 h-4 mr-1" />
-            {Math.floor(question.timestamp / 60)}:
-            {Math.floor(question.timestamp % 60).toString().padStart(2, "0")}
-          </Button>
-        </div>
-
-        <div className="min-h-[80px]">
-          <h3 className="font-medium text-lg break-words">{question.question}</h3>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2">
-          {question.choices.map((choice, idx) => (
-            <Button
-              key={idx}
-              variant="outline"
-              className={`justify-start h-auto py-3 px-4 text-left break-words ${
-                isAnswerRevealed
-                  ? idx === question.correctAnswer
-                    ? "bg-green-100 dark:bg-green-900 border-green-500"
-                    : idx === selectedAnswer
-                    ? "bg-red-100 dark:bg-red-900 border-red-500"
-                    : ""
-                  : "hover:bg-accent"
-              }`}
-              onClick={() => handleAnswerSelect(idx)}
-              disabled={isAnswerRevealed}
-            >
-              <div className="flex items-start">
-                {isAnswerRevealed && idx === question.correctAnswer && (
-                  <Check className="w-4 h-4 mr-2 mt-1 flex-shrink-0 text-green-500" />
-                )}
-                {isAnswerRevealed && idx === selectedAnswer && idx !== question.correctAnswer && (
-                  <X className="w-4 h-4 mr-2 mt-1 flex-shrink-0 text-red-500" />
-                )}
-                <span className="flex-1 text-base break-word">{choice}</span>
-              </div>
-            </Button>
-          ))}
-        </div>
-
-        {isAnswerRevealed && (
-          <div className="mt-4 p-4 bg-muted rounded-lg">
-            <p className="font-medium">Explanation:</p>
-            <p className="text-muted-foreground break-words">{question.explanation}</p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <Card className="p-4">
       <div className="space-y-4">
@@ -361,36 +261,36 @@ export const VideoQuiz = ({
             <p className="text-sm text-muted-foreground mt-2">Loading quizzes...</p>
           </div>
         ) : quizzes.length > 0 ? (
-          renderCurrentQuestion()
+          <>
+            <QuizNavigation
+              quizzes={quizzes}
+              currentQuizIndex={currentQuizIndex}
+              currentQuestionIndex={currentQuestionIndex}
+              totalQuestions={quizzes[currentQuizIndex].questions.length}
+              isDeleting={isDeleting}
+              onPreviousQuiz={previousQuiz}
+              onNextQuiz={nextQuiz}
+              onDeleteQuiz={deleteQuiz}
+            />
+            <QuizQuestion
+              question={quizzes[currentQuizIndex].questions[currentQuestionIndex]}
+              selectedAnswer={selectedAnswer}
+              onAnswerSelect={handleAnswerSelect}
+              onSeek={onSeek}
+            />
+            <QuizControls
+              currentQuestionIndex={currentQuestionIndex}
+              totalQuestions={quizzes[currentQuizIndex].questions.length}
+              onPreviousQuestion={previousQuestion}
+              onNextQuestion={nextQuestion}
+            />
+          </>
         ) : (
           <p className="text-center text-muted-foreground text-sm">
             Generate a quiz to test your knowledge of the video content
           </p>
         )}
       </div>
-
-      {quizzes.length > 0 && (
-        <div className="flex justify-between mt-4 h-9">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={previousQuestion}
-            disabled={currentQuestionIndex === 0}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={nextQuestion}
-            disabled={currentQuestionIndex === quizzes[currentQuizIndex].questions.length - 1}
-          >
-            Next
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
-      )}
     </Card>
   );
 };
