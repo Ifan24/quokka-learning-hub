@@ -17,4 +17,5 @@ export interface VideoDetails {
   transcription_status?: string;
   transcription_text?: string;
   transcription_chunks?: TranscriptionChunk[];
+  thumbnail_url?: string;
 }

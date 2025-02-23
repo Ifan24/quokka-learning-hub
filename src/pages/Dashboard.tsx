@@ -35,21 +35,31 @@ const Dashboard = () => {
       if (error) throw error;
 
       // Transform the data to match VideoDetails type
-      const transformedData: VideoDetails[] = (data || []).map(video => ({
-        id: video.id,
-        title: video.title,
-        description: video.description || "",
-        views: video.views || 0,
-        duration: video.duration,
-        file_path: video.file_path,
-        created_at: video.created_at,
-        user_id: video.user_id,
-        is_public: video.is_public || false,
-        transcription_status: video.transcription_status,
-        transcription_text: video.transcription_text,
-        transcription_chunks: video.transcription_chunks as TranscriptionChunk[] | undefined,
-        thumbnail_url: video.thumbnail_url
-      }));
+      const transformedData: VideoDetails[] = (data || []).map(video => {
+        // Parse transcription chunks if they exist
+        const transcriptionChunks = video.transcription_chunks 
+          ? (video.transcription_chunks as any[]).map((chunk): TranscriptionChunk => ({
+              timestamp: chunk.timestamp,
+              text: chunk.text
+            }))
+          : undefined;
+
+        return {
+          id: video.id,
+          title: video.title,
+          description: video.description || "",
+          views: video.views || 0,
+          duration: video.duration,
+          file_path: video.file_path,
+          created_at: video.created_at,
+          user_id: video.user_id,
+          is_public: video.is_public || false,
+          transcription_status: video.transcription_status,
+          transcription_text: video.transcription_text,
+          transcription_chunks: transcriptionChunks,
+          thumbnail_url: video.thumbnail_url
+        };
+      });
 
       setVideos(transformedData);
     } catch (error: any) {
