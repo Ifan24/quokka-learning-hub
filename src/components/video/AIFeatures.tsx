@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { MessageCircle, BrainCircuit } from "lucide-react";
 import { VideoChat } from "./VideoChat";
@@ -13,7 +13,7 @@ interface AIFeaturesProps {
 }
 
 export const AIFeatures = ({ video, onSeek }: AIFeaturesProps) => {
-  const [activeTab, setActiveTab] = useState<string>("chat");
+  const [activeTab, setActiveTab] = useState<string>("quiz");
 
   return (
     <Card className="h-full">
@@ -36,11 +36,6 @@ export const AIFeatures = ({ video, onSeek }: AIFeaturesProps) => {
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
-        <CardDescription>
-          {activeTab === "chat" 
-            ? "Ask questions about the video content" 
-            : "Test your knowledge with AI-generated quizzes"}
-        </CardDescription>
       </CardHeader>
       <CardContent className="p-4">
         <div className="transition-all duration-200">
