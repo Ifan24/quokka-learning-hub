@@ -1,5 +1,5 @@
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { VideoInfo } from "@/components/video/VideoInfo";
@@ -9,6 +9,7 @@ import { LoadingState } from "@/components/video/LoadingState";
 import { NotFoundState } from "@/components/video/NotFoundState";
 import { useVideoDetails } from "@/hooks/use-video-details";
 import { useTranscription } from "@/hooks/use-transcription";
+import { useConversation } from "@11labs/react";
 import ReactPlayer from "react-player";
 
 const Video = () => {
@@ -19,6 +20,32 @@ const Video = () => {
   const [widgetLoaded, setWidgetLoaded] = useState(false);
   const [widgetError, setWidgetError] = useState<string | null>(null);
   const checkAttemptsRef = useRef(0);
+
+  // Initialize conversation
+  const conversation = useConversation({
+    onConnect: () => console.log('Connected to voice chat'),
+    onDisconnect: () => console.log('Disconnected from voice chat'),
+    onMessage: (message) => console.log('Message:', message),
+    onError: (error) => console.error('Voice chat error:', error),
+  });
+
+  const startVoiceChat = useCallback(async () => {
+    try {
+      // Request microphone permission
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Start the conversation with your agent
+      await conversation.startSession({
+        agentId: "NFHyy3RjdfqvoaaVRqlC", // Using the same agent ID as the widget
+      });
+    } catch (error) {
+      console.error('Failed to start voice chat:', error);
+    }
+  }, [conversation]);
+
+  const stopVoiceChat = useCallback(async () => {
+    await conversation.endSession();
+  }, [conversation]);
 
   const handleSeek = (time: number) => {
     if (videoRef.current) {
@@ -48,7 +75,7 @@ const Video = () => {
       } else {
         checkAttemptsRef.current += 1;
         if (checkAttemptsRef.current >= 30) { // Try for 30 seconds (30 attempts * 1000ms)
-          setWidgetError('Widget failed to load. Please refresh the page.');
+          setWidgetError('Widget failed to load. Try voice chat instead.');
           return;
         }
         // Continue checking every second until widget is found or max attempts reached
@@ -89,6 +116,31 @@ const Video = () => {
               onTranscribe={startTranscription}
             />
             <AIFeatures video={video} onSeek={handleSeek} />
+            
+            {/* Voice Chat Controls */}
+            <div className="p-4 bg-card rounded-lg shadow-sm">
+              <h3 className="font-semibold mb-4">Voice Chat</h3>
+              <div className="flex gap-4">
+                <button
+                  onClick={startVoiceChat}
+                  disabled={conversation.status === 'connected'}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md disabled:opacity-50"
+                >
+                  Start Voice Chat
+                </button>
+                <button
+                  onClick={stopVoiceChat}
+                  disabled={conversation.status !== 'connected'}
+                  className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md disabled:opacity-50"
+                >
+                  Stop Voice Chat
+                </button>
+              </div>
+              <div className="mt-4 text-sm text-muted-foreground">
+                <p>Status: {conversation.status}</p>
+                <p>Agent is {conversation.isSpeaking ? 'speaking' : 'listening'}</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -101,8 +153,8 @@ const Video = () => {
       )}
       
       {widgetError && (
-        <div className="fixed bottom-4 right-4 bg-destructive p-4 rounded-lg shadow-lg text-white">
-          {widgetError}
+        <div className="fixed bottom-4 right-4 bg-secondary p-4 rounded-lg shadow-lg">
+          <span>{widgetError}</span>
         </div>
       )}
 
