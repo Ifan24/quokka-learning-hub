@@ -1,6 +1,6 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { ElevenLabsClient } from "elevenlabs"
+import { ElevenLabsClient } from "npm:elevenlabs@1.51.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
