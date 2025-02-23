@@ -1,6 +1,6 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { ElevenLabsClient } from "elevenlabs"
+import { ElevenLabsClient } from "npm:elevenlabs@1.51.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,19 +31,19 @@ serve(async (req) => {
       apiKey: apiKey
     })
 
-    const response = await client.textToSpeech.convert("JBFqnCBsd6RMkjVDRZzb", {
+    // Get the audio buffer directly from the API
+    const audioBuffer = await client.textToSpeech.convert("JBFqnCBsd6RMkjVDRZzb", {
       output_format: "mp3_44100_128",
       text: text,
       model_id: "eleven_multilingual_v2"
     })
 
-    if (!response) {
+    if (!audioBuffer) {
       throw new Error('Failed to generate speech')
     }
 
-    // Convert ArrayBuffer to base64
-    const buffer = await response.arrayBuffer()
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    // The response is already a buffer, so we can convert it directly to base64
+    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)))
 
     console.log('Successfully generated speech')
 
