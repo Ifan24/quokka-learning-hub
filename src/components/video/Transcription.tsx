@@ -74,15 +74,19 @@ export const Transcription = ({
     return null;
   };
 
+  const showTranscribeButton = !video.transcription_chunks || 
+    video.transcription_status === 'failed' || 
+    !video.transcription_status;
+
   return (
     <Card className="p-4 py-1 text-left">
-      {video?.transcription_status !== 'completed' && (
+      {showTranscribeButton && (
         <Button 
           onClick={onTranscribe} 
           disabled={isTranscribing || video?.transcription_status === 'processing'} 
           className="w-full"
         >
-          {(video?.transcription_status === 'processing' || isTranscribing) ? (
+          {(isTranscribing || video?.transcription_status === 'processing') ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Transcribing...
@@ -90,7 +94,7 @@ export const Transcription = ({
           ) : (
             <>
               <Wand2 className="w-4 h-4 mr-2" />
-              Generate Transcription
+              {video.transcription_status === 'failed' ? 'Retry Transcription' : 'Generate Transcription'}
             </>
           )}
         </Button>
