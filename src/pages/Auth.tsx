@@ -34,7 +34,8 @@ const Auth = () => {
         });
         setIsForgotPassword(false);
       } else if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        // Sign up the user
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -43,11 +44,25 @@ const Auth = () => {
             },
           },
         });
-        if (error) throw error;
-        toast({
-          title: "Sign up successful!",
-          description: "Please check your email to verify your account.",
-        });
+        
+        if (signUpError) throw signUpError;
+
+        // Check if the user was created successfully
+        if (signUpData.user) {
+          toast({
+            title: "Sign up successful!",
+            description: "Your account has been created and you're now logged in.",
+          });
+          
+          // User is automatically logged in by Supabase after signup
+          navigate("/dashboard");
+        } else {
+          // This case handles when email confirmation is required
+          toast({
+            title: "Sign up successful!",
+            description: "Please check your email to verify your account.",
+          });
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
