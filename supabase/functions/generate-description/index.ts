@@ -26,13 +26,12 @@ serve(async (req) => {
       credentials: Deno.env.get('FAL_API_KEY'),
     })
 
-    const prompt = `You are a helpful assistant that generates concise video descriptions based on transcripts. Keep descriptions under 200 words and focus on key points.
+    const prompt = `You are a YouTube description writer. Based on this video transcript, write an engaging and informative video description that captures the main topics and key points discussed. Make it sound natural and engaging, similar to descriptions you'd find on popular YouTube videos. Focus only on the content - don't add any meta text like "Here's a description" or "This video is about". Write in a clear, direct style that will make viewers want to watch the video.
 
-Generate a clear and concise description for a video based on this transcript:
-
+Transcript:
 ${transcriptionText}
 
-Please provide a clear and engaging description that captures the main points and purpose of the video.`
+Write a video description that captures the main points and value of this content.`
 
     console.log('Sending request to FAL AI for description generation...')
     const result = await fal.subscribe("fal-ai/any-llm", {
