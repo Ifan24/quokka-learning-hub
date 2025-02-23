@@ -27,14 +27,22 @@ const Settings = () => {
     const fetchCredits = async () => {
       setIsLoading(true);
       try {
+        // Create credits record if it doesn't exist
+        const { error: insertError } = await supabase
+          .from("credits")
+          .insert({ user_id: user.id, amount: 100 })
+          .select()
+          .maybeSingle();
+
+        // Now fetch the credits (either existing or newly created)
         const { data, error } = await supabase
           .from("credits")
           .select("amount")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
-        setCredits(data.amount);
+        setCredits(data?.amount ?? 0);
       } catch (error: any) {
         console.error("Error fetching credits:", error);
         toast({
@@ -61,7 +69,7 @@ const Settings = () => {
         .from("redeem_codes")
         .select("*")
         .eq("code", redeemCode)
-        .single();
+        .maybeSingle();
 
       if (codeError || !codes) {
         throw new Error("Invalid code");
@@ -77,7 +85,7 @@ const Settings = () => {
         .select("*")
         .eq("code", redeemCode)
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (usageData) {
         throw new Error("You have already used this code");
