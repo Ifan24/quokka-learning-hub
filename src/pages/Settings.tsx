@@ -75,7 +75,8 @@ const Settings = () => {
         throw new Error("Invalid code");
       }
 
-      if (codes.total_uses >= (codes.max_uses || 20)) {
+      // Check if code has any uses left
+      if (codes.total_uses >= codes.max_uses) {
         throw new Error("This code has reached its maximum usage limit");
       }
 
@@ -108,6 +109,14 @@ const Settings = () => {
         });
 
       if (logError) throw logError;
+
+      // Increment the total uses for this code
+      const { error: incrementError } = await supabase
+        .from("redeem_codes")
+        .update({ total_uses: (codes.total_uses || 0) + 1 })
+        .eq("code", redeemCode);
+
+      if (incrementError) throw incrementError;
 
       // Update local credits state
       setCredits(prev => (prev || 0) + codes.credit_amount);
@@ -193,4 +202,3 @@ const Settings = () => {
 };
 
 export default Settings;
-
