@@ -34,13 +34,27 @@ export default function Video() {
   const [newTitle, setNewTitle] = useState("");
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchVideo = async () => {
-      if (!videoId) return;
+      if (!videoId) {
+        console.error("No videoId provided");
+        setError("No video ID provided");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!user) {
+        console.error("No user found");
+        setError("Please login to view this video");
+        setIsLoading(false);
+        return;
+      }
 
       try {
-        console.log("Fetching video with ID:", videoId);
+        console.log("Starting video fetch. VideoID:", videoId, "UserID:", user.id);
+        
         const { data, error } = await supabase
           .from("videos")
           .select("*")
@@ -48,7 +62,7 @@ export default function Video() {
           .single();
 
         if (error) {
-          console.error("Error fetching video:", error);
+          console.error("Supabase error fetching video:", error);
           throw error;
         }
 
@@ -61,11 +75,13 @@ export default function Video() {
         setVideo(data);
         setTranscription(data.transcription_text);
         setNewTitle(data.title);
+        setError(null);
       } catch (error: any) {
         console.error("Error in fetchVideo:", error);
+        setError(error.message || "Failed to load video");
         toast({
           title: "Error",
-          description: "Failed to load video",
+          description: error.message || "Failed to load video",
           variant: "destructive",
         });
       } finally {
@@ -74,7 +90,7 @@ export default function Video() {
     };
 
     fetchVideo();
-  }, [videoId, toast]);
+  }, [videoId, user, toast]);
 
   const handleTranscribe = async () => {
     if (!videoId || !user) return;
@@ -146,9 +162,32 @@ export default function Video() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading video...</span>
+      <div className="flex flex-col items-center justify-center h-screen">
+        <div className="flex items-center mb-4">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading video...</span>
+        </div>
+        <p className="text-sm text-muted-foreground">Video ID: {videoId}</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Error</CardTitle>
+            <CardDescription>{error}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>Details:</p>
+            <ul className="list-disc pl-4">
+              <li>Video ID: {videoId}</li>
+              <li>User authenticated: {user ? "Yes" : "No"}</li>
+            </ul>
+          </CardContent>
+        </Card>
       </div>
     );
   }
