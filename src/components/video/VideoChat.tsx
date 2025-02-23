@@ -26,7 +26,7 @@ export function VideoChat({ videoId }: { videoId: string }) {
       try {
         const { data, error } = await supabase
           .from("video_chats")
-          .select("content, isUser")
+          .select("content, isuser")
           .eq("video_id", videoId)
           .order("created_at", { ascending: true });
 
@@ -37,8 +37,13 @@ export function VideoChat({ videoId }: { videoId: string }) {
             description: "Failed to load initial messages",
             variant: "destructive",
           });
-        } else {
-          setMessages(data as ChatMessage[]);
+        } else if (data) {
+          // Map the database response to our ChatMessage interface
+          const formattedMessages: ChatMessage[] = data.map(msg => ({
+            content: msg.content,
+            isUser: msg.isuser ?? true
+          }));
+          setMessages(formattedMessages);
         }
       } finally {
         setIsLoading(false);
@@ -58,9 +63,9 @@ export function VideoChat({ videoId }: { videoId: string }) {
           filter: `video_id=eq.${videoId}`,
         },
         (payload) => {
-          const newMessage = {
+          const newMessage: ChatMessage = {
             content: payload.new.content,
-            isUser: payload.new.isUser,
+            isUser: payload.new.isuser ?? true
           };
           setMessages((prevMessages) => [...prevMessages, newMessage]);
         }
@@ -84,7 +89,7 @@ export function VideoChat({ videoId }: { videoId: string }) {
         video_id: videoId,
         user_id: user.id,
         content: message,
-        isUser: true,
+        isuser: true // Note: using lowercase to match database column name
       });
 
       if (error) {
