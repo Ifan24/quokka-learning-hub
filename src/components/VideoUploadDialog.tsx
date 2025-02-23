@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface VideoUploadDialogProps {
   onUploadComplete?: () => void;
@@ -24,9 +26,8 @@ export function VideoUploadDialog({ onUploadComplete, children }: VideoUploadDia
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const generateThumbnail = (videoFile: File): Promise<Blob> => {
     return new Promise((resolve, reject) => {
@@ -193,6 +194,11 @@ export function VideoUploadDialog({ onUploadComplete, children }: VideoUploadDia
       });
       setOpen(false);
       onUploadComplete?.();
+      
+      // Redirect to video page after successful upload
+      if (videoData) {
+        navigate(`/videos/${videoData.id}`);
+      }
     } catch (error: any) {
       toast({
         title: "Upload failed",
@@ -220,10 +226,7 @@ export function VideoUploadDialog({ onUploadComplete, children }: VideoUploadDia
       }
     }}>
       <DialogTrigger asChild>
-        <Button className="whitespace-nowrap inline-flex items-center">
-          <Upload className="w-4 h-4 mr-2" />
-          Upload New Video
-        </Button>
+        {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

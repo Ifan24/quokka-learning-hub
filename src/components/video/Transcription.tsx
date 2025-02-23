@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wand2, ChevronDown, ChevronUp } from "lucide-react";
+import { Wand2, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import type { VideoDetails, TranscriptionChunk } from "@/types/video";
 
 interface TranscriptionProps {
@@ -82,8 +82,17 @@ export const Transcription = ({
           disabled={isTranscribing || video?.transcription_status === 'processing'} 
           className="w-full"
         >
-          <Wand2 className="w-4 h-4 mr-2" />
-          {video?.transcription_status === 'processing' || isTranscribing ? 'Transcribing...' : 'Generate Transcription'}
+          {(video?.transcription_status === 'processing' || isTranscribing) ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Transcribing...
+            </>
+          ) : (
+            <>
+              <Wand2 className="w-4 h-4 mr-2" />
+              Generate Transcription
+            </>
+          )}
         </Button>
       )}
       {renderTranscriptionContent()}
