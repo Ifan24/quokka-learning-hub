@@ -11,7 +11,7 @@ const Navigation = () => {
     <nav className="w-full border-b">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link to="/" className="text-primary text-xl font-bold">
+          <Link to="/" className="text-xl font-bold">
             Quokka
           </Link>
           {user && (
@@ -21,7 +21,7 @@ const Navigation = () => {
                 className={`${
                   location.pathname === "/dashboard"
                     ? "text-primary"
-                    : "text-secondary"
+                    : "text-secondary-foreground"
                 } hover:text-primary transition-colors`}
               >
                 Dashboard
@@ -31,7 +31,7 @@ const Navigation = () => {
                 className={`${
                   location.pathname === "/videos"
                     ? "text-primary"
-                    : "text-secondary"
+                    : "text-secondary-foreground"
                 } hover:text-primary transition-colors`}
               >
                 Videos
@@ -39,17 +39,15 @@ const Navigation = () => {
             </div>
           )}
         </div>
-        {user ? (
-          <Button variant="outline" onClick={signOut}>
-            Sign Out
-          </Button>
-        ) : (
-          <Link to={location.pathname === "/auth" ? "/" : "/auth"}>
-            <Button variant="outline">
-              {location.pathname === "/auth" ? "Back to Home" : "Sign In"}
+        <Link to={user ? "/dashboard" : "/auth"}>
+          {user ? (
+            <Button variant="outline" onClick={signOut}>
+              Sign Out
             </Button>
-          </Link>
-        )}
+          ) : (
+            <Button variant="outline">Sign In</Button>
+          )}
+        </Link>
       </div>
     </nav>
   );
