@@ -6,11 +6,13 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
+import { ConfirmEmail } from "@/components/auth/ConfirmEmail";
 import { useAuth } from "@/components/AuthProvider";
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [confirmedEmail, setConfirmedEmail] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -36,19 +38,28 @@ const Auth = () => {
   }, [user, navigate]);
 
   const getTitle = () => {
+    if (confirmedEmail) return "Confirm Your Email";
     if (isForgotPassword) return "Reset Password";
     if (isSignUp) return "Create an Account";
     return "Welcome Back";
   };
 
   const getForm = () => {
+    if (confirmedEmail) {
+      return <ConfirmEmail email={confirmedEmail} />;
+    }
     if (isForgotPassword) {
       return (
         <ResetPasswordForm onBackToLogin={() => setIsForgotPassword(false)} />
       );
     }
     if (isSignUp) {
-      return <SignupForm onToggleMode={() => setIsSignUp(false)} />;
+      return (
+        <SignupForm
+          onToggleMode={() => setIsSignUp(false)}
+          onSignupSuccess={(email) => setConfirmedEmail(email)}
+        />
+      );
     }
     return (
       <LoginForm

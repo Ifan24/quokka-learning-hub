@@ -7,9 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface SignupFormProps {
   onToggleMode: () => void;
+  onSignupSuccess: (email: string) => void;
 }
 
-export const SignupForm = ({ onToggleMode }: SignupFormProps) => {
+export const SignupForm = ({ onToggleMode, onSignupSuccess }: SignupFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,17 +32,13 @@ export const SignupForm = ({ onToggleMode }: SignupFormProps) => {
         },
       });
       if (error) throw error;
-      toast({
-        title: "Sign up successful!",
-        description: "Please check your email to verify your account.",
-      });
+      onSignupSuccess(email);
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
