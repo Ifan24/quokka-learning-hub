@@ -66,7 +66,7 @@ export const VideoChat = ({ video }: VideoChatProps) => {
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`p-3 rounded-lg ${
+              className={`p-3 rounded-lg text-left ${
                 message.role === "user"
                   ? "bg-primary text-primary-foreground ml-4"
                   : "bg-muted mr-4"
