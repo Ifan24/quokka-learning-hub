@@ -25,21 +25,29 @@ serve(async (req) => {
       throw new Error('ElevenLabs API key is not configured')
     }
 
+    // Remove any whitespace from the API key
+    const cleanApiKey = apiKey.trim()
+    
     console.log('Generating speech for text:', text)
-    console.log('API Key length:', apiKey.length) // Log the length to verify we have a key
+    console.log('API Key starts with:', cleanApiKey.substring(0, 4)) // Log first few chars to verify format
 
-    const client = new ElevenLabsClient({
-      apiKey: apiKey
+    // Direct API call to test the key
+    const testResponse = await fetch('https://api.elevenlabs.io/v1/voices', {
+      headers: {
+        'Accept': 'application/json',
+        'xi-api-key': cleanApiKey
+      }
     })
 
-    // First verify the API key is working by getting available voices
-    try {
-      const voices = await client.voices.getAll()
-      console.log('Successfully verified API key, found voices:', voices.length)
-    } catch (error) {
-      console.error('Failed to verify API key:', error)
-      throw new Error('Invalid API key or API key verification failed')
+    if (!testResponse.ok) {
+      const error = await testResponse.text()
+      console.error('API Key validation failed:', error)
+      throw new Error('Invalid API key')
     }
+
+    const client = new ElevenLabsClient({
+      apiKey: cleanApiKey
+    })
 
     const response = await client.textToSpeech.convert(
       "JBFqnCBsd6RMkjVDRZzb", // George voice
