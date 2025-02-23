@@ -10,17 +10,17 @@ const Index = () => {
   const { user } = useAuth();
   
   return (
-    <div className="min-h-screen bg-[#FEF7CD]">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="py-20 md:py-28">
         <div className="container px-4 mx-auto">
           <div className="flex flex-col md:flex-row items-center gap-12">
             <div className="flex-1 text-left space-y-6">
-              <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-[#403E43]">
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
                 Learn Smarter with{" "}
                 <span className="text-[#FEC6A1]">AI-Powered Video Insights</span>
               </h1>
-              <p className="text-xl text-[#8A898C]">
+              <p className="text-xl text-muted-foreground">
                 Quokka helps you learn efficiently with AI-generated quizzes,
                 transcriptions, and interactive discussions.
               </p>
