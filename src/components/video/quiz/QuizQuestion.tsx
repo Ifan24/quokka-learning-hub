@@ -1,5 +1,4 @@
-
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Check, X, Volume2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -31,16 +30,28 @@ export const QuizQuestion = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
+  // Cleanup audio when question changes or component unmounts
+  useEffect(() => {
+    return () => {
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+        setAudioElement(null);
+      }
+    };
+  }, [question]); // Re-run cleanup when question changes
+
   const generateAndPlaySpeech = async () => {
     if (isGenerating) return;
 
     try {
       setIsGenerating(true);
       
-      // Stop any currently playing audio
+      // Stop and cleanup any currently playing audio
       if (audioElement) {
         audioElement.pause();
         audioElement.currentTime = 0;
+        setAudioElement(null);
       }
 
       // Check if we have cached audio for this question
@@ -99,6 +110,7 @@ export const QuizQuestion = ({
       
       audio.onended = () => {
         setIsGenerating(false);
+        setAudioElement(null);
       };
       
       setAudioElement(audio);
