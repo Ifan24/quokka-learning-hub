@@ -17,7 +17,15 @@ import { useAuth } from "./components/AuthProvider";
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   if (!user) {
-    return <Navigate to="/auth" />;
+    return <Navigate to="/" />;
+  }
+  return <>{children}</>;
+};
+
+const AuthRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  if (user) {
+    return <Navigate to="/dashboard" />;
   }
   return <>{children}</>;
 };
@@ -31,7 +39,14 @@ function App() {
         <AuthProvider>
           <Navigation />
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route 
+              path="/" 
+              element={
+                <AuthRoute>
+                  <Index />
+                </AuthRoute>
+              } 
+            />
             <Route 
               path="/dashboard" 
               element={
@@ -40,7 +55,14 @@ function App() {
                 </PrivateRoute>
               } 
             />
-            <Route path="/auth" element={<Auth />} />
+            <Route 
+              path="/auth" 
+              element={
+                <AuthRoute>
+                  <Auth />
+                </AuthRoute>
+              } 
+            />
             <Route 
               path="/videos" 
               element={
