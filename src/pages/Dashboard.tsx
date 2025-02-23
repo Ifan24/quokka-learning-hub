@@ -9,7 +9,7 @@ import { VideoUploadDialog } from "@/components/VideoUploadDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { VideoDetails } from "@/types/video";
+import { VideoDetails, TranscriptionChunk } from "@/types/video";
 
 const Dashboard = () => {
   const [videos, setVideos] = useState<VideoDetails[]>([]);
@@ -34,7 +34,24 @@ const Dashboard = () => {
 
       if (error) throw error;
 
-      setVideos(data || []);
+      // Transform the data to match VideoDetails type
+      const transformedData: VideoDetails[] = (data || []).map(video => ({
+        id: video.id,
+        title: video.title,
+        description: video.description || "",
+        views: video.views || 0,
+        duration: video.duration,
+        file_path: video.file_path,
+        created_at: video.created_at,
+        user_id: video.user_id,
+        is_public: video.is_public || false,
+        transcription_status: video.transcription_status,
+        transcription_text: video.transcription_text,
+        transcription_chunks: video.transcription_chunks as TranscriptionChunk[] | undefined,
+        thumbnail_url: video.thumbnail_url
+      }));
+
+      setVideos(transformedData);
     } catch (error: any) {
       toast({
         title: "Error fetching videos",
