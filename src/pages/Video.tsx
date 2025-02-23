@@ -31,7 +31,8 @@ const Video = () => {
         agent: {
           prompt: {
             prompt: `You are an AI assistant helping users understand a video. Here is the transcription of the video content: ${video.transcription_text}. Use this context to answer questions about the video content.`
-          }
+          },
+          first_message: "Hi! I've analyzed the video content and I'm ready to answer any questions you have about it. What would you like to know?"
         }
       };
       widget.setAttribute('override-config', JSON.stringify(overrideConfig));
@@ -67,7 +68,7 @@ const Video = () => {
       </div>
 
       <elevenlabs-convai
-        agent-id="replace-with-your-agent-id"
+        agent-id="NFHyy3RjdfqvoaaVRqlC"
         action-text="Ask about this video"
         start-call-text="Start conversation"
         listening-text="Listening..."
