@@ -77,24 +77,19 @@ export const Transcription = ({ video, isTranscribing, onTranscribe }: Transcrip
 
   return (
     <Card className="p-4">
-      <h2 className="font-semibold mb-2">AI Features</h2>
-      <div className="space-y-4">
-        <div>
-          {video?.transcription_status !== 'completed' && (
-            <Button
-              onClick={onTranscribe}
-              disabled={isTranscribing || video?.transcription_status === 'processing'}
-              className="w-full"
-            >
-              <Wand2 className="w-4 h-4 mr-2" />
-              {video?.transcription_status === 'processing' || isTranscribing
-                ? 'Transcribing...'
-                : 'Generate Transcription'}
-            </Button>
-          )}
-          {renderTranscriptionContent()}
-        </div>
-      </div>
+      {video?.transcription_status !== 'completed' && (
+        <Button
+          onClick={onTranscribe}
+          disabled={isTranscribing || video?.transcription_status === 'processing'}
+          className="w-full"
+        >
+          <Wand2 className="w-4 h-4 mr-2" />
+          {video?.transcription_status === 'processing' || isTranscribing
+            ? 'Transcribing...'
+            : 'Generate Transcription'}
+        </Button>
+      )}
+      {renderTranscriptionContent()}
     </Card>
   );
 };
