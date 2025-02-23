@@ -117,7 +117,6 @@ export type Database = {
           code: string
           created_at: string
           credit_amount: number
-          is_used: boolean | null
           max_uses: number | null
           total_uses: number | null
           used_at: string | null
@@ -127,7 +126,6 @@ export type Database = {
           code: string
           created_at?: string
           credit_amount: number
-          is_used?: boolean | null
           max_uses?: number | null
           total_uses?: number | null
           used_at?: string | null
@@ -137,62 +135,10 @@ export type Database = {
           code?: string
           created_at?: string
           credit_amount?: number
-          is_used?: boolean | null
           max_uses?: number | null
           total_uses?: number | null
           used_at?: string | null
           used_by?: string | null
-        }
-        Relationships: []
-      }
-      subscriptions: {
-        Row: {
-          cancel_at: string | null
-          cancel_at_period_end: boolean | null
-          canceled_at: string | null
-          created_at: string
-          current_period_end: string | null
-          current_period_start: string | null
-          id: string
-          price_id: string | null
-          quantity: number | null
-          status: string | null
-          stripe_customer_id: string | null
-          stripe_subscription_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          cancel_at?: string | null
-          cancel_at_period_end?: boolean | null
-          canceled_at?: string | null
-          created_at?: string
-          current_period_end?: string | null
-          current_period_start?: string | null
-          id?: string
-          price_id?: string | null
-          quantity?: number | null
-          status?: string | null
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          cancel_at?: string | null
-          cancel_at_period_end?: boolean | null
-          canceled_at?: string | null
-          created_at?: string
-          current_period_end?: string | null
-          current_period_start?: string | null
-          id?: string
-          price_id?: string | null
-          quantity?: number | null
-          status?: string | null
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
