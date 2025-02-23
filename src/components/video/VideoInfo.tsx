@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { VideoDetails } from "@/types/video";
+import type { VideoDetails, TranscriptionChunk } from "@/types/video";
 
 interface VideoInfoProps {
   video: VideoDetails;
@@ -39,7 +39,7 @@ export const VideoInfo = ({ video, onUpdate }: VideoInfoProps) => {
       if (error) throw error;
 
       // Fetch updated video details
-      const { data: updatedVideo, error: fetchError } = await supabase
+      const { data: videoData, error: fetchError } = await supabase
         .from("videos")
         .select("*")
         .eq("id", video.id)
@@ -47,7 +47,15 @@ export const VideoInfo = ({ video, onUpdate }: VideoInfoProps) => {
 
       if (fetchError) throw fetchError;
 
-      onUpdate(updatedVideo);
+      // Parse the transcription chunks before updating
+      const parsedVideo: VideoDetails = {
+        ...videoData,
+        transcription_chunks: videoData.transcription_chunks 
+          ? (videoData.transcription_chunks as any as TranscriptionChunk[])
+          : undefined
+      };
+
+      onUpdate(parsedVideo);
 
       toast({
         title: "Success",
