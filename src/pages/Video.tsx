@@ -1,238 +1,219 @@
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { useAuth } from "@/components/AuthProvider";
-import { useToast } from "@/hooks/use-toast";
-import { checkAndDeductCredits } from "@/utils/credits";
-import { supabase } from "@/integrations/supabase/client";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+
+import { useState, useEffect, useRef } from "react";
+import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ChevronLeft } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { VideoPlayer } from "@/components/video/VideoPlayer";
+import { VideoInfo } from "@/components/video/VideoInfo";
+import { Transcription } from "@/components/video/Transcription";
 import { VideoChat } from "@/components/video/VideoChat";
 import { VideoQuiz } from "@/components/video/VideoQuiz";
-import { Loader2 } from "lucide-react";
+import type { VideoDetails, TranscriptionChunk } from "@/types/video";
+import ReactPlayer from "react-player";
 
-export default function Video() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const { videoId } = useParams();
-  const [video, setVideo] = useState<any>(null);
-  const [transcription, setTranscription] = useState<string | null>(null);
+const Video = () => {
+  const { id } = useParams<{ id: string }>();
+  const [video, setVideo] = useState<VideoDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
+  const videoRef = useRef<ReactPlayer | null>(null);
+  const { toast } = useToast();
+
+  const handleSeek = (time: number) => {
+    if (videoRef.current) {
+      videoRef.current.seekTo(time);
+    }
+  };
 
   useEffect(() => {
     const fetchVideo = async () => {
-      if (!videoId) return;
-
       try {
-        const { data, error } = await supabase
+        const { data: videoData, error: videoError } = await supabase
           .from("videos")
-          .select("*")
-          .eq("id", videoId)
+          .select(`*`)
+          .eq("id", id)
           .single();
 
-        if (error) {
-          throw error;
-        }
+        if (videoError) throw videoError;
 
-        setVideo(data);
-        setTranscription(data.transcription_text);
-        setNewTitle(data.title);
+        const parsedVideo: VideoDetails = {
+          ...videoData,
+          transcription_chunks: videoData.transcription_chunks 
+            ? (videoData.transcription_chunks as any as TranscriptionChunk[])
+            : undefined
+        };
+        
+        setVideo(parsedVideo);
+
+        const { data: urlData, error: urlError } = await supabase.storage
+          .from("videos")
+          .createSignedUrl(videoData.file_path, 7200);
+
+        if (urlError) throw urlError;
+        if (!urlData?.signedUrl) throw new Error("Could not get video URL");
+        
+        setVideoUrl(urlData.signedUrl);
+
+        await supabase
+          .from("videos")
+          .update({ views: (videoData.views || 0) + 1 })
+          .eq("id", id);
+
       } catch (error: any) {
+        console.error("Error loading video:", error);
         toast({
-          title: "Error",
-          description: "Failed to load video",
+          title: "Error loading video",
+          description: error.message,
           variant: "destructive",
         });
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchVideo();
-  }, [videoId, toast]);
+    if (id) {
+      fetchVideo();
+    }
+  }, [id, toast]);
 
-  const handleTranscribe = async () => {
-    if (!videoId || !user) return;
-    
+  const startTranscription = async () => {
+    if (!video) return;
+
     try {
-      // Check and deduct credits before transcribing
-      await checkAndDeductCredits(user.id);
-      
       setIsTranscribing(true);
-      const { data, error } = await supabase.functions.invoke("transcribe", {
-        body: {
-          video_id: videoId,
-        },
-      });
 
-      if (error) {
-        throw error;
-      }
+      const { data: urlData, error: urlError } = await supabase.storage
+        .from("videos")
+        .createSignedUrl(video.file_path, 3600);
 
-      setTranscription(data.transcription_text);
-      setVideo((prevVideo: any) => ({
-        ...prevVideo,
-        transcription_text: data.transcription_text,
-      }));
+      if (urlError) throw urlError;
+      if (!urlData?.signedUrl) throw new Error("Could not get video URL");
+
+      const { error: transcriptionError } = await supabase.functions
+        .invoke('transcribe-video', {
+          body: { videoId: video.id, signedUrl: urlData.signedUrl }
+        });
+
+      if (transcriptionError) throw transcriptionError;
 
       toast({
-        title: "Success!",
-        description: "Video transcribed successfully!",
+        title: "Transcription started",
+        description: "The video is being transcribed. This may take a few minutes.",
       });
+
+      const interval = setInterval(async () => {
+        const { data: updatedVideo, error: refreshError } = await supabase
+          .from("videos")
+          .select("*")
+          .eq("id", video.id)
+          .single();
+
+        if (!refreshError && updatedVideo) {
+          const parsedVideo: VideoDetails = {
+            ...updatedVideo,
+            transcription_chunks: updatedVideo.transcription_chunks 
+              ? (updatedVideo.transcription_chunks as any as TranscriptionChunk[])
+              : undefined
+          };
+          
+          setVideo(parsedVideo);
+          
+          if (updatedVideo.transcription_status === 'completed') {
+            clearInterval(interval);
+            toast({
+              title: "Transcription completed",
+              description: "The video transcription is now available.",
+            });
+            setIsTranscribing(false);
+          } else if (updatedVideo.transcription_status === 'failed') {
+            clearInterval(interval);
+            toast({
+              title: "Transcription failed",
+              description: "There was an error transcribing the video.",
+              variant: "destructive",
+            });
+            setIsTranscribing(false);
+          }
+        }
+      }, 5000);
+
+      setTimeout(() => clearInterval(interval), 600000);
+
     } catch (error: any) {
+      console.error("Transcription error:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to transcribe video",
+        title: "Transcription failed",
+        description: error.message,
         variant: "destructive",
       });
-    } finally {
       setIsTranscribing(false);
     }
   };
 
-  const handleUpdateTitle = async () => {
-    if (!videoId) return;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container px-4 py-8">
+          <Skeleton className="h-[60vh] w-full mb-4" />
+          <Skeleton className="h-8 w-1/2 mb-2" />
+          <Skeleton className="h-4 w-1/4 mb-4" />
+          <Skeleton className="h-20 w-3/4" />
+        </div>
+      </div>
+    );
+  }
 
-    setIsUpdatingTitle(true);
-    try {
-      const { error } = await supabase
-        .from("videos")
-        .update({ title: newTitle })
-        .eq("id", videoId);
-
-      if (error) {
-        throw error;
-      }
-
-      setVideo((prevVideo: any) => ({ ...prevVideo, title: newTitle }));
-      toast({
-        title: "Success!",
-        description: "Video title updated successfully!",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to update video title",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingTitle(false);
-    }
-  };
-
-  if (!video) {
-    return <div>Loading...</div>;
+  if (!video || !videoUrl) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container px-4 py-8 text-center">
+          <p className="text-muted-foreground">Video not found</p>
+          <Link to="/dashboard">
+            <Button variant="outline" className="mt-4">
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-4">Video Details</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Video Section */}
-        <div className="md:col-span-1">
-          <video
-            src={video.file_path}
-            controls
-            className="w-full aspect-video rounded-md"
-          />
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <Input
-                  type="text"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="text-2xl font-bold leading-none tracking-tight"
-                />
-              </CardTitle>
-              <CardDescription>{video.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center justify-between">
-              <Button onClick={handleUpdateTitle} disabled={isUpdatingTitle}>
-                {isUpdatingTitle ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  "Update Title"
-                )}
-              </Button>
-              <p className="text-sm text-muted-foreground">
-                Uploaded at:{" "}
-                {new Date(video.created_at).toLocaleDateString()}
-              </p>
-            </CardContent>
-          </Card>
+    <div className="min-h-screen bg-background">
+      <div className="container px-4 py-8">
+        <div className="mb-6">
+          <Link to="/dashboard">
+            <Button variant="outline">
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </Link>
         </div>
 
-        {/* Transcription and AI Features Section */}
-        <div className="md:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Transcription</CardTitle>
-              <CardDescription>
-                {transcription
-                  ? "View or update the video transcription."
-                  : "Generate the video transcription."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {transcription ? (
-                <div className="space-y-4">
-                  <Label htmlFor="transcription">Transcription:</Label>
-                  <Input
-                    id="transcription"
-                    value={transcription}
-                    readOnly
-                    className="min-h-[100px] overflow-y-auto"
-                  />
-                </div>
-              ) : (
-                <Button onClick={handleTranscribe} disabled={isTranscribing}>
-                  {isTranscribing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Transcribing...
-                    </>
-                  ) : (
-                    "Transcribe"
-                  )}
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8">
+            <VideoPlayer url={videoUrl} ref={videoRef} />
+            <VideoInfo video={video} />
+          </div>
 
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="chat">
-              <AccordionTrigger>Video Chat</AccordionTrigger>
-              <AccordionContent>
-                <VideoChat videoId={videoId} />
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="quiz">
-              <AccordionTrigger>Video Quiz</AccordionTrigger>
-              <AccordionContent>
-                <VideoQuiz videoId={videoId} />
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          <div className="lg:col-span-4 space-y-6">
+            <Transcription
+              video={video}
+              isTranscribing={isTranscribing}
+              onTranscribe={startTranscription}
+            />
+            <VideoQuiz video={video} onSeek={handleSeek} />
+            <VideoChat video={video} />
+          </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default Video;
