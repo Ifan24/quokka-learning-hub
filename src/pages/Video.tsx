@@ -33,12 +33,14 @@ export default function Video() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchVideo = async () => {
       if (!videoId) return;
 
       try {
+        console.log("Fetching video with ID:", videoId);
         const { data, error } = await supabase
           .from("videos")
           .select("*")
@@ -46,18 +48,28 @@ export default function Video() {
           .single();
 
         if (error) {
+          console.error("Error fetching video:", error);
           throw error;
         }
 
+        if (!data) {
+          console.error("No video found with ID:", videoId);
+          throw new Error("Video not found");
+        }
+
+        console.log("Video data received:", data);
         setVideo(data);
         setTranscription(data.transcription_text);
         setNewTitle(data.title);
       } catch (error: any) {
+        console.error("Error in fetchVideo:", error);
         toast({
           title: "Error",
           description: "Failed to load video",
           variant: "destructive",
         });
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -68,7 +80,6 @@ export default function Video() {
     if (!videoId || !user) return;
     
     try {
-      // Check and deduct credits before transcribing
       await checkAndDeductCredits(user.id);
       
       setIsTranscribing(true);
@@ -133,8 +144,22 @@ export default function Video() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading video...</span>
+      </div>
+    );
+  }
+
   if (!video) {
-    return <div>Loading...</div>;
+    return (
+      <div className="container mx-auto py-8">
+        <h1 className="text-2xl font-bold mb-4">Video not found</h1>
+        <p>The requested video could not be found.</p>
+      </div>
+    );
   }
 
   return (
@@ -221,13 +246,13 @@ export default function Video() {
             <AccordionItem value="chat">
               <AccordionTrigger>Video Chat</AccordionTrigger>
               <AccordionContent>
-                <VideoChat videoId={videoId} />
+                <VideoChat videoId={videoId!} />
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="quiz">
               <AccordionTrigger>Video Quiz</AccordionTrigger>
               <AccordionContent>
-                <VideoQuiz videoId={videoId} />
+                <VideoQuiz videoId={videoId!} />
               </AccordionContent>
             </AccordionItem>
           </Accordion>
