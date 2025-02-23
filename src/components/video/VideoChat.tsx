@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/AuthProvider";
@@ -7,17 +6,15 @@ import { checkAndDeductCredits } from "@/utils/credits";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Send } from "lucide-react";
-
-interface ChatMessage {
-  content: string;
-  isUser: boolean;
-}
+import { useEffect } from "react";
 
 export function VideoChat({ videoId }: { videoId: string }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<
+    { content: string; isUser: boolean }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -26,7 +23,7 @@ export function VideoChat({ videoId }: { videoId: string }) {
       try {
         const { data, error } = await supabase
           .from("video_chats")
-          .select("content, isuser")
+          .select("content, isUser")
           .eq("video_id", videoId)
           .order("created_at", { ascending: true });
 
@@ -37,13 +34,8 @@ export function VideoChat({ videoId }: { videoId: string }) {
             description: "Failed to load initial messages",
             variant: "destructive",
           });
-        } else if (data) {
-          // Map the database response to our ChatMessage interface
-          const formattedMessages: ChatMessage[] = data.map(msg => ({
-            content: msg.content,
-            isUser: msg.isuser ?? true
-          }));
-          setMessages(formattedMessages);
+        } else {
+          setMessages(data as { content: string; isUser: boolean }[]);
         }
       } finally {
         setIsLoading(false);
@@ -63,10 +55,7 @@ export function VideoChat({ videoId }: { videoId: string }) {
           filter: `video_id=eq.${videoId}`,
         },
         (payload) => {
-          const newMessage: ChatMessage = {
-            content: payload.new.content,
-            isUser: payload.new.isuser ?? true
-          };
+          const newMessage = payload.new as { content: string; isUser: boolean };
           setMessages((prevMessages) => [...prevMessages, newMessage]);
         }
       )
@@ -89,7 +78,7 @@ export function VideoChat({ videoId }: { videoId: string }) {
         video_id: videoId,
         user_id: user.id,
         content: message,
-        isuser: true // Note: using lowercase to match database column name
+        isUser: true,
       });
 
       if (error) {
@@ -116,17 +105,15 @@ export function VideoChat({ videoId }: { videoId: string }) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-grow space-y-4 p-4 overflow-y-auto">
-        {isLoading && messages.length === 0 ? (
+        {isLoading ? (
           <div>Loading messages...</div>
         ) : (
           messages.map((msg, index) => (
             <div
               key={index}
-              className={`p-2 rounded-lg ${
-                msg.isUser 
-                  ? "bg-primary text-primary-foreground ml-auto" 
-                  : "bg-muted"
-              } max-w-[80%] ${msg.isUser ? "ml-auto" : "mr-auto"}`}
+              className={`chat-bubble ${
+                msg.isUser ? "user-message" : "ai-message"
+              }`}
             >
               {msg.content}
             </div>

@@ -27,82 +27,54 @@ import { Loader2 } from "lucide-react";
 export default function Video() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { id } = useParams<{ id: string }>();
+  const { videoId } = useParams();
   const [video, setVideo] = useState<any>(null);
   const [transcription, setTranscription] = useState<string | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("Component mounted, video id:", id);
     const fetchVideo = async () => {
-      if (!id) {
-        console.error("No video ID provided");
-        setError("No video ID provided");
-        setIsLoading(false);
-        return;
-      }
-
-      if (!user) {
-        console.error("No user found");
-        setError("Please login to view this video");
-        setIsLoading(false);
-        return;
-      }
+      if (!videoId) return;
 
       try {
-        console.log("Starting video fetch. Video ID:", id, "UserID:", user.id);
-        
         const { data, error } = await supabase
           .from("videos")
           .select("*")
-          .eq("id", id)
-          .maybeSingle();
+          .eq("id", videoId)
+          .single();
 
         if (error) {
-          console.error("Supabase error fetching video:", error);
           throw error;
         }
 
-        if (!data) {
-          console.error("No video found with ID:", id);
-          throw new Error("Video not found");
-        }
-
-        console.log("Video data received:", data);
         setVideo(data);
         setTranscription(data.transcription_text);
         setNewTitle(data.title);
-        setError(null);
       } catch (error: any) {
-        console.error("Error in fetchVideo:", error);
-        setError(error.message || "Failed to load video");
         toast({
           title: "Error",
-          description: error.message || "Failed to load video",
+          description: "Failed to load video",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
       }
     };
 
     fetchVideo();
-  }, [id, user, toast]);
+  }, [videoId, toast]);
 
   const handleTranscribe = async () => {
-    if (!id || !user) return;
+    if (!videoId || !user) return;
     
     try {
+      // Check and deduct credits before transcribing
       await checkAndDeductCredits(user.id);
       
       setIsTranscribing(true);
       const { data, error } = await supabase.functions.invoke("transcribe", {
         body: {
-          video_id: id,
+          video_id: videoId,
         },
       });
 
@@ -132,14 +104,14 @@ export default function Video() {
   };
 
   const handleUpdateTitle = async () => {
-    if (!id) return;
+    if (!videoId) return;
 
     setIsUpdatingTitle(true);
     try {
       const { error } = await supabase
         .from("videos")
         .update({ title: newTitle })
-        .eq("id", id);
+        .eq("id", videoId);
 
       if (error) {
         throw error;
@@ -161,45 +133,8 @@ export default function Video() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <div className="flex items-center mb-4">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading video...</span>
-        </div>
-        <p className="text-sm text-muted-foreground">Video ID: {id}</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Details:</p>
-            <ul className="list-disc pl-4">
-              <li>Video ID: {id}</li>
-              <li>User authenticated: {user ? "Yes" : "No"}</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   if (!video) {
-    return (
-      <div className="container mx-auto py-8">
-        <h1 className="text-2xl font-bold mb-4">Video not found</h1>
-        <p>The requested video could not be found.</p>
-      </div>
-    );
+    return <div>Loading...</div>;
   }
 
   return (
@@ -286,13 +221,13 @@ export default function Video() {
             <AccordionItem value="chat">
               <AccordionTrigger>Video Chat</AccordionTrigger>
               <AccordionContent>
-                <VideoChat videoId={id!} />
+                <VideoChat videoId={videoId} />
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="quiz">
               <AccordionTrigger>Video Quiz</AccordionTrigger>
               <AccordionContent>
-                <VideoQuiz videoId={id!} />
+                <VideoQuiz videoId={videoId} />
               </AccordionContent>
             </AccordionItem>
           </Accordion>

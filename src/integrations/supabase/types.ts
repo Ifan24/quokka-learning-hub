@@ -136,41 +136,6 @@ export type Database = {
         }
         Relationships: []
       }
-      video_chats: {
-        Row: {
-          content: string
-          created_at: string | null
-          id: string
-          isuser: boolean | null
-          user_id: string
-          video_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string | null
-          id?: string
-          isuser?: boolean | null
-          user_id: string
-          video_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string | null
-          id?: string
-          isuser?: boolean | null
-          user_id?: string
-          video_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "video_chats_video_id_fkey"
-            columns: ["video_id"]
-            isOneToOne: false
-            referencedRelation: "videos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       videos: {
         Row: {
           audio_file_path: string | null
