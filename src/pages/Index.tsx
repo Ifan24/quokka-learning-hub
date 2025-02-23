@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { BrainCircuit, MessageCircle, FileText, Video, ArrowRight } from "lucide-react";
@@ -26,7 +25,7 @@ const Index = () => {
               </p>
               <div className="flex gap-4">
                 <Link to={user ? "/dashboard" : "/auth"}>
-                  <Button size="lg" className="bg-primary hover:bg-primary/90 text-white gap-2">
+                  <Button size="lg" className="bg-[#7E69AB] hover:bg-[#6E59A5] text-white gap-2">
                     Get Started - Sign In
                     <ArrowRight className="w-4 h-4" />
                   </Button>
@@ -35,7 +34,7 @@ const Index = () => {
             </div>
             <div className="flex-1">
               <img
-                src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b"
+                src="https://images.unsplash.com/photo-1518770660439-4636190af475"
                 alt="Platform Preview"
                 className="w-full h-auto rounded-lg shadow-lg object-cover"
               />
@@ -122,7 +121,7 @@ const Index = () => {
             AI-enhanced video learning.
           </p>
           <Link to={user ? "/dashboard" : "/auth"}>
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-white gap-2">
+            <Button size="lg" className="bg-[#7E69AB] hover:bg-[#6E59A5] text-white gap-2">
               Get Started
               <ArrowRight className="w-4 h-4" />
             </Button>
