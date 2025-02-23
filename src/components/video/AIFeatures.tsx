@@ -16,7 +16,7 @@ export const AIFeatures = ({ video, onSeek }: AIFeaturesProps) => {
   const [activeTab, setActiveTab] = useState<string>("quiz");
 
   return (
-    <Card className="h-full">
+    <Card className="h-[400px]">
       <CardHeader>
         <div className="flex items-center justify-between mb-2">
           <CardTitle>AI Features</CardTitle>
@@ -37,7 +37,7 @@ export const AIFeatures = ({ video, onSeek }: AIFeaturesProps) => {
           </ToggleGroup>
         </div>
       </CardHeader>
-      <CardContent className="p-4">
+      <CardContent className="p-4 overflow-y-auto h-[calc(400px-96px)]">
         <div className="transition-all duration-200">
           {activeTab === "chat" ? (
             <VideoChat video={video} />
